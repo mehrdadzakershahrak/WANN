@@ -1,0 +1,14 @@
+gym[atari]
+gym
+pandas
+numpy
+matplotlib
+sns
+Pillow
+scikit-learn
+pyarrow
+scipy
+opencv-contrib-python
+tensorflow==2.0.0
+torch==1.5.1
+torchvision
