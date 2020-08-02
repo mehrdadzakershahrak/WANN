@@ -1,7 +1,7 @@
 gym[atari]
 gym
 pandas
-numpy
+numpy==1.16.1
 matplotlib
 sns
 Pillow
@@ -9,6 +9,7 @@ scikit-learn
 pyarrow
 scipy
 opencv-contrib-python
-tensorflow==2.0.0
-torch==1.5.1
-torchvision
+tensorflow-gpu==1.14
+mpi4py==3.0.3
+baselines==0.1.5
+tensorboard

@@ -1,24 +1,30 @@
 import gym
-from model.dqn_net import DqnVnn
-from agent.dqn import DqnAgent
+from extern.baselines import run as B
 
 
-def brickbreak_ram():
-    n_traject = 50
+def brickbreak_ram(args):
+    # TODO: register custom wrapped env here
 
-    env = gym.make('Breakout-ram-v0').unwrapped
+    # TODO: remove basic defaults once README.md is updated
 
-    n_acts = env.action_space.n
-    n_obs_space = env.observation_space.shape[0]
+    #TODO: observation wrap environment
+    #TODO: register wrapped environment
+    # this will use the WANN as feature abstractor from obs with final linear layer
+    # to map outputs to expected input of agent
+    # this will look like call(env, wann, n_out)
 
-    s = env.reset()
+    # a similar stragety can also be employed for custom models that baselines uses internally
 
-    model = DqnVnn(n_obs_space, n_acts)
-    agent = DqnAgent(model, env)
+    # arguments passthrough
+    model = B.main(args)
 
-    agent.train(init_state=s, episodes=100000, max_timesteps=25)
+    # TODO: visualize and compare experiment results
+    # Score results as line graph for returns over games, scores over games including mean, median, max
+    # horizontal bar graph comparing scores
+    # heatmap of various hyperparameter configurations in champion network(s)
+
+    # ablation studies and dendrite graphs of variable components along with results
+    # video clip play outputs
+    # table of results for direct comparison
 
     print('agent training complete')
-
-    env.close()
-
