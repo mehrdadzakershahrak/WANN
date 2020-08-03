@@ -1,8 +1,8 @@
 import random
 import numpy as np
 import sys
-from domain.make_env import make_env
-from neat_src import *
+from extern.wann.domain.make_env import make_env
+from extern.wann.neat_src import *
 
 
 class GymTask():

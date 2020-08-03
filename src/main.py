@@ -1,7 +1,8 @@
-from task.brickbreak import brickbreak_ram
+from task import cartpole
 import argparse
 from datetime import datetime
 import sys
+import multiprocessing as mp
 
 
 # TODO: add proper logging
@@ -11,11 +12,19 @@ def main(args):
 
     # TODO: perform type assertions on arguments with argparse
     parser.add_argument('--alg', action='store_true', default='ddpg')
-    parser.add_argument('--env', action='store_true', default='Breakout-ram-v0')
+    parser.add_argument('--env', action='store_true', default='CartPole-v1')
     parser.add_argument('--num_timesteps', action='store_true', default=2e7)
     parser.add_argument('--play', action='store_true')
-    parser.add_argument('--save_path', action='store_true', default=f'~/tmp/WANN/models-{datetime.now(tz=None)}')
+    parser.add_argument('--save_path', action='store_true', default=f'~/tmp/WANN/models-{str(datetime.now(tz=None)).replace(" ", "_")}')
     parser.add_argument('--load_path', action='store_true')
+    parser.add_argument('-d', '--default', type=str, \
+                        help='default hyperparameter file', default='extern/wann/p/default_wann.json')
+    parser.add_argument('-p', '--hyperparam', type=str, \
+                        help='hyperparameter file', default='extern/wann/p/laptop_swing.json')
+    parser.add_argument('-o', '--outPrefix', type=str, \
+                        help='file name for result output', default='test')
+    parser.add_argument('-n', '--num_worker', type=int, \
+                        help='number of cores to use', default=mp.cpu_count())
 
     # parser.add_argument('--env', help='environment ID', type=str, default='Reacher-v2')
     # parser.add_argument('--env_type',
@@ -38,8 +47,8 @@ def main(args):
 
     args = parser.parse_args()
 
-    if args.env.strip().lower() in ['breakout-ram-v0']:
-        brickbreak_ram(args)
+    if args.env.strip().lower() in ['cartpole-v1']:
+        cartpole.balance(args)
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 

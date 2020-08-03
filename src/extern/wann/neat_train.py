@@ -13,8 +13,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
 # prettyNeat
-from neat_src import * # NEAT
-from domain import *   # Task environments
+from extern.wann.neat_src import * # NEAT
+from extern.wann.domain import *   # Task environments
 
 
 # -- Run NEAT ------------------------------------------------------------ -- #

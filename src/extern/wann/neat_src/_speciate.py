@@ -1,5 +1,5 @@
 import numpy as np
-from utils import *
+from extern.wann.utils import *
 
 class Species():
   """Species class, only contains fields: all methods belong to the NEAT class.

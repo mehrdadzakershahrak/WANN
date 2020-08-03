@@ -2,7 +2,7 @@ import numpy as np
 import copy
 from .ind import *
 from .ann import getLayer, getNodeOrder
-from utils import listXor
+from extern.wann.utils import listXor
 
 
 class WannInd(Ind):

@@ -12,4 +12,10 @@ opencv-contrib-python
 tensorflow-gpu==1.14
 mpi4py==3.0.3
 baselines==0.1.5
-tensorboard
+tensorboard==1.14.0
+Box2D
+vae
+seaborn
+networkx
+glob
+warnings

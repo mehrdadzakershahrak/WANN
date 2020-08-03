@@ -1,7 +1,7 @@
 import numpy as np
 import itertools
 from .ind import Ind
-from utils import *
+from extern.wann.utils import *
 
 
 def evolvePop(self):

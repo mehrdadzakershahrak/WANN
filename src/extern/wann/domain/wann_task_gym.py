@@ -1,9 +1,9 @@
 import random
 import numpy as np
 import sys
-from domain.make_env import make_env
-from domain.task_gym import GymTask
-from neat_src import *
+from extern.wann.domain.make_env import make_env
+from extern.wann.domain.task_gym import GymTask
+from extern.wann.neat_src import *
 
 
 class WannGymTask(GymTask):

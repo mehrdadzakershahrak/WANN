@@ -4,7 +4,7 @@ import numpy as np
 import sys
 sys.path.append('../domain/')
 sys.path.append('vis')
-from domain.config import games
+from extern.wann.domain.config import games
 
 def viewInd(ind, taskName):
   env = games[taskName]

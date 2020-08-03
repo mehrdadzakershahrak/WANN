@@ -4,8 +4,8 @@ import argparse
 np.set_printoptions(precision=2) 
 np.set_printoptions(linewidth=160)
 
-from neat_src import * # NEAT
-from domain   import * # Task environments
+from extern.wann.neat_src import * # NEAT
+from extern.wann.domain import * # Task environments
 
 def main(argv):
   """Tests network on task N times and returns mean fitness.

@@ -15,11 +15,6 @@ def brickbreak_ram(args):
 
     # a similar stragety can also be employed for custom models that baselines uses internally
 
-
-
-    # arguments passthrough
-    model = B.main(args)
-
     # TODO: visualize and compare experiment results
     # Score results as line graph for returns over games, scores over games including mean, median, max
     # horizontal bar graph comparing scores

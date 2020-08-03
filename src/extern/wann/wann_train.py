@@ -13,11 +13,18 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
 # prettyNeat
-from neat_src import * # NEAT and WANNs
-from domain import *   # Task environments
+from extern.wann.neat_src import * # NEAT and WANNs
+from extern.wann.domain import *   # Task environments
 
 import multiprocessing as mp
 
+games = None
+
+
+def init_games_config(g):
+  global games
+
+  games = g
 
 # -- Run NEAT ------------------------------------------------------------ -- #
 def master(): 
@@ -226,7 +233,11 @@ def mpi_fork(n):
       IN_MPI="1"
     )
     print( ["mpirun", "-np", str(n), sys.executable] + sys.argv)
-    subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
+
+    # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
+    # local mod to work with Win 10
+    subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
+
     return "parent"
   else:
     global nWorker, rank
@@ -238,14 +249,18 @@ def mpi_fork(n):
 
 # -- Input Parsing ------------------------------------------------------- -- #
 
-def main(argv):
+def run(args):
   """Handles command line input, launches optimization or evaluation script
   depending on MPI rank.
   """
+  # Use MPI if parallel
+  if "parent" == mpi_fork(args.num_worker + 1): os._exit(0)
+
   global fileName, hyp # Used by both master and slave processes
   fileName    = args.outPrefix
   hyp_default = args.default
   hyp_adjust  = args.hyperparam
+  nWorker = args.num_worker
 
   hyp = loadHyp(pFileName=hyp_default)
   updateHyp(hyp,hyp_adjust)
@@ -278,4 +293,4 @@ if __name__ == "__main__":
   # Use MPI if parallel
   if "parent" == mpi_fork(args.num_worker+1): os._exit(0)
 
-  main(args)                              
+  run(args)
