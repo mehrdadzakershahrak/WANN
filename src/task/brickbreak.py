@@ -1,5 +1,5 @@
 import gym
-from extern.baselines import run as B
+from baselines import run as B
 
 
 def brickbreak_ram(args):

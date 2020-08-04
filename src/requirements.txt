@@ -11,11 +11,7 @@ scipy
 opencv-contrib-python
 tensorflow-gpu==1.14
 mpi4py==3.0.3
-baselines==0.1.5
-tensorboard==1.14.0
-Box2D
-vae
 seaborn
 networkx
-glob
-warnings
+cloudpickle==1.2.0
+stable-baselines==2.10.0

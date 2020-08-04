@@ -2,15 +2,19 @@ from collections import namedtuple
 from extern.wann import wann_test as wtest
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
-import extern.baselines.baselines.run as brun
-
+from stable_baselines.common.policies import MlpPolicy
+from stable_baselines.common.vec_env import SubprocVecEnv
+from stable_baselines.common import set_global_seeds, make_vec_env
+from stable_baselines import ACKTR
 import gym
 import numpy as np
+import os
+import multiprocessing as mp
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
-  'input_size', 'output_size', 'layers', 'i_act', 'h_act',
-  'o_act', 'weightCap','noise_bias','output_noise','max_episode_length','in_out_labels'])
-
+                           'input_size', 'output_size', 'layers', 'i_act', 'h_act',
+                           'o_act', 'weightCap', 'noise_bias', 'output_noise',
+                           'max_episode_length', 'in_out_labels'])
 games = {}
 
 # See reference to WANN extern wann/domain/config.py for reference config
@@ -26,12 +30,37 @@ cartpole_swingup = Game(env_name='CartPoleSwingUp_Hard',
   weightCap=2.0,
   noise_bias=0.0,
   output_noise=[False, False, False],
-  max_episode_length = 200,
-  in_out_labels = ['x','x_dot','cos(theta)','sin(theta)','theta_dot',
+  max_episode_length=200,
+  in_out_labels = ['x', 'x_dot','cos(theta)','sin(theta)','theta_dot',
                    'force']
 )
 
 games['swingup'] = cartpole_swingup
+
+NUM_WORKERS = mp.cpu_count()
+
+
+def make_env(env_id, rank, seed=0):
+    """
+    Utility function for multiprocessed env.
+
+    :param env_id: (str) the environment ID
+    :param num_env: (int) the number of environments you wish to have in subprocesses
+    :param seed: (int) the inital seed for RNG
+    :param rank: (int) index of the subprocess
+    """
+    def _init():
+        gym.envs.register(
+            id=env_id,
+            entry_point='task.cartpole:_balance_env',
+            max_episode_steps=10000
+        )
+
+        env = gym.make(env_id)
+        env.seed(seed + rank)
+        return env
+    set_global_seeds(seed)
+    return _init
 
 
 def balance(args):
@@ -41,17 +70,20 @@ def balance(args):
     # Train WANN feature extractor
     # wtrain.run(args)
 
-    id = 'wann-cartpolebalance-v1'
-    gym.envs.register(
-        id=id,
-        entry_point='task.cartpole:_balance_env',
-        max_episode_steps=10000
-    )
+    eid = 'wann-cartpolebalance-v1'
 
-    brun.run(args)
+    env = SubprocVecEnv([make_env(eid, i) for i in range(NUM_WORKERS)])
+    m = ACKTR(MlpPolicy, env, verbose=1)
+    m.learn(total_timesteps=25000)
 
-    # TODO: put baselines
+    obs = env.reset()
+    while True:
+        a, s = m.predict(obs)
+        obs, r, dones, _ = env.step(a)
+        env.render()
+
     print('test')
+
 
 
 def _balance_env():
@@ -94,6 +126,7 @@ class CartPoleObsWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         # modify obs
 
+        # TODO add wann feature extraction here
         print('OBSERVATION CALLED')
 
         # feats = wnet.act(self.wVec, self.aVec[:-2],
