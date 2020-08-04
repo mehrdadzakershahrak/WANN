@@ -1,5 +1,9 @@
 from collections import namedtuple
-from extern.wann import wann_train as wt
+from extern.wann import wann_test as wtest
+from extern.wann import wann_train as wtrain
+from extern.wann.neat_src import ann as wnet
+import extern.baselines.baselines.run as brun
+
 import gym
 import numpy as np
 
@@ -31,15 +35,30 @@ games['swingup'] = cartpole_swingup
 
 
 def balance(args):
-    wt.init_games_config(games)
+    wtrain.init_games_config(games)
 
     # TODO: add flg here to determine if pre-training is needed
     # Train WANN feature extractor
-    wt.run(args)
+    # wtrain.run(args)
 
-    # TODO: register custom wrapped env here
+    id = 'wann-cartpolebalance-v1'
+    gym.envs.register(
+        id=id,
+        entry_point='task.cartpole:_balance_env',
+        max_episode_steps=10000
+    )
 
-    # TODO: remove basic defaults once README.md is updated
+    brun.run(args)
+
+    # TODO: put baselines
+    print('test')
+
+
+def _balance_env():
+    # TODO: replace with actual model artifacts config path
+    env = CartPoleObsWrapper(gym.make('CartPole-v1'),
+                             m_artifacts_path='extern/wann/champions/swing.out')
+    return env
 
     #TODO: observation wrap environment
     #TODO: register wrapped environment
@@ -61,3 +80,25 @@ def balance(args):
     # table of results for direct comparison
 
     print('agent training complete')
+
+
+class CartPoleObsWrapper(gym.ObservationWrapper):
+    def __init__(self, env, m_artifacts_path):
+        super().__init__(env)
+
+        self.wVec, self.aVec, _ = wnet.importNet('extern/wann/champions/swing.out')
+        self.n_obs_space = 5 # TODO: pull dynamic
+            # env.observation_space
+        self.wVec[:-self.n_obs_space+1] = 1.0
+
+    def observation(self, obs):
+        # modify obs
+
+        print('OBSERVATION CALLED')
+
+        # feats = wnet.act(self.wVec, self.aVec[:-2],
+        #                  nInput=self.n_obs_space,
+        #                  nOutput=self.n_obs_space,
+        #                  pattern=obs)
+
+        return obs

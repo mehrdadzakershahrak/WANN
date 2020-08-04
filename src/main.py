@@ -11,10 +11,14 @@ def main(args):
     parser = argparse.ArgumentParser(description='WANN as RL Prior Experiment')
 
     # TODO: perform type assertions on arguments with argparse
-    parser.add_argument('--alg', action='store_true', default='ddpg')
-    parser.add_argument('--env', action='store_true', default='CartPole-v1')
+    parser.add_argument('--alg', action='store_true', default='ppo')
+    parser.add_argument('--env', action='store_true', default='wann-cartpolebalance-v1')
+    parser.add_argument('--seed', action='store_true', default=0)
+    parser.add_argument('--network', action='store_true', default='mlp')
     parser.add_argument('--num_timesteps', action='store_true', default=2e7)
+    parser.add_argument('--log_path', action='store_true', default='results/log/')
     parser.add_argument('--play', action='store_true')
+    parser.add_argument('--env_type', action='store_true', default='custom')
     parser.add_argument('--save_path', action='store_true', default=f'~/tmp/WANN/models-{str(datetime.now(tz=None)).replace(" ", "_")}')
     parser.add_argument('--load_path', action='store_true')
     parser.add_argument('-d', '--default', type=str, \
@@ -45,12 +49,21 @@ def main(args):
     # parser.add_argument('--log_path', help='Directory to save learning curve data.', default=None, type=str)
     # parser.add_argument('--play', default=False, action='store_true')
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
-    if args.env.strip().lower() in ['cartpole-v1']:
+    if args.env.strip().lower() in ['wann-cartpolebalance-v1']:
         cartpole.balance(args)
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
+
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 if __name__ == '__main__':
