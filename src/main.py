@@ -18,7 +18,6 @@ def main(args):
     parser.add_argument('--num_timesteps', action='store_true', default=2e7)
     parser.add_argument('--log_path', action='store_true', default='results/log/')
     parser.add_argument('--play', action='store_true')
-    parser.add_argument('--env_type', action='store_true', default='custom')
     parser.add_argument('--save_path', action='store_true', default=f'~/tmp/WANN/models-{str(datetime.now(tz=None)).replace(" ", "_")}')
     parser.add_argument('--load_path', action='store_true')
     parser.add_argument('-d', '--default', type=str, \
