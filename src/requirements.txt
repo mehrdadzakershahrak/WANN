@@ -1,7 +1,7 @@
 gym[atari]
 gym
 pandas
-numpy==1.16.1
+numpy==1.17.0
 matplotlib
 sns
 Pillow
@@ -15,3 +15,6 @@ seaborn
 networkx
 cloudpickle==1.2.0
 stable-baselines==2.10.0
+stable-baselines[mpi]
+gym-retro
+procgen
