@@ -17,12 +17,14 @@ import config
 # TODO: clean this up
 
 ARTIFACTS_PATH = f'{config.RESULTS_PATH}{os.sep}wann-ppo2-model'
-WANN_CHAMPION_PATH = f'champion{os.sep}'
-
+eid = None
 NUM_WORKERS = mp.cpu_count()
 
 
+# TODO: update to auto save multiple experiments / reload most recent
 def balance():
+    global eid
+
     base_env = 'CartPole-v1'
     # See reference to WANN extern wann/domain/config.py for reference config
 
@@ -82,62 +84,40 @@ def balance():
     if config.SHOULD_TRAIN_WANN:
         wtrain.run(wann_args)
 
-    # TODO: add in champion selection here
-    # TODO: match up training size
-
     env = make_vec_env(eid, n_envs=mp.cpu_count())
 
-    m = PPO2(MlpPolicy, env, verbose=1)
-    m.learn(total_timesteps=2000000, log_interval=10)
-
-    m.save(ARTIFACTS_PATH)
+    if not config.USE_PREV_EXPERIMENT:
+        m = PPO2(MlpPolicy, env, verbose=1)
+        m.learn(total_timesteps=10000, log_interval=10)
+        m.save(ARTIFACTS_PATH)
 
     m = PPO2.load(ARTIFACTS_PATH)
 
-    # wVec, aVec, _ = wnet.importNet(f'log{os.sep}test_best{os.sep}0008.out')
-    # feats = wnet.act(wVec, aVec[:-2],
-    #                  nInput=obs.shape[1],
-    #                  nOutput=obs.shape[1],
-    #                  inPattern=obs)
-
     test_env = gym.make(eid)
     obs = test_env.reset()
+
     while True:
         a, s = m.predict(obs, deterministic=True)
-        obs, r, done, _ = test_env.step(a)
+        obs, r, done, _ = test_env.step(a[0])
         test_env.render(mode='human')
-
-    print('test')
 
 
 def _balance_env():
-    # TODO: replace with actual model artifacts config path
     env = CartPoleObsWrapper(gym.make('CartPole-v1'),
-                             m_artifacts_path='extern/wann/champions/swing.out')
+                             champion_artifacts_path=config.RESULTS_PATH+eid+'_best.out')
     return env
 
 
 class CartPoleObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, m_artifacts_path):
+    def __init__(self, env, champion_artifacts_path):
         super().__init__(env)
 
-        self.wVec, self.aVec, _ = wnet.importNet(m_artifacts_path)
-        # self.n_obs_space = n_obs_space  TODO: pull dynamic
-        # self.wVec[:-self.n_obs_space+1] = 1.0
+        self.wVec, self.aVec, _ = wnet.importNet(champion_artifacts_path)
 
     def observation(self, obs):
-        # modify obs
+        feats = wnet.act(self.wVec, self.aVec,
+                         nInput=obs.shape[0],
+                         nOutput=obs.shape[0],
+                         inPattern=obs)
 
-        # TODO add wann feature extraction here
-        # print('OBSERVATION CALLED')
-
-        # feats = wnet.act(self.wVec, self.aVec[:-2],
-        #                  nInput=self.n_obs_space,
-        #                  nOutput=self.n_obs_space,
-        #                  pattern=obs)
-
-        return obs
-
-
-def update_champion():
-    pass
+        return feats

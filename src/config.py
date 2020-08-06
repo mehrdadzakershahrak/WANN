@@ -10,9 +10,9 @@ ARTIFACTS_PATH = 'model'
 TFBOARD_LOG_PATH = 'tf-log'
 
 USE_PREV_EXPERIMENT = False
-PREV_EXPERIMENT_PATH = None
+PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}{os.sep}wann-ppo2-model'
 
-SHOULD_TRAIN_WANN = True
+SHOULD_TRAIN_WANN = False
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
@@ -23,7 +23,7 @@ _default_wann_hyperparams = {
     "task": None,
     "maxGen": 1024,
     "alg_nReps": 3,
-    "popSize": 192,
+    "popSize": 1024,
     "select_eliteRatio": 0.2,
     "select_tournSize": 8,
     "alg_wDist": "standard",
