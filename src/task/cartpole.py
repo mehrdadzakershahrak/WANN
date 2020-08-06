@@ -17,36 +17,42 @@ import config
 # TODO: clean this up
 
 ARTIFACTS_PATH = f'{config.RESULTS_PATH}{os.sep}wann-ppo2-model'
+WANN_CHAMPION_PATH = f'champion{os.sep}'
 
 NUM_WORKERS = mp.cpu_count()
-Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
-                           'input_size', 'output_size', 'layers', 'i_act', 'h_act',
-                           'o_act', 'weightCap', 'noise_bias', 'output_noise',
-                           'max_episode_length', 'in_out_labels'])
-games = {}
-
-# See reference to WANN extern wann/domain/config.py for reference config
-cartpole_swingup = Game(env_name='CartPoleSwingUp_Hard',
-    actionSelect='all',  # all, soft, hard
-    input_size=5,
-    output_size=1,
-    time_factor=0,
-    layers=[5, 5],
-    i_act=np.full(5,1),
-    h_act=[1,2,3,4,5,6,7,8,9,10],
-    o_act=np.full(1,1),
-    weightCap=2.0,
-    noise_bias=0.0,
-    output_noise=[False, False, False],
-    max_episode_length=200,
-    in_out_labels=['x', 'x_dot','cos(theta)','sin(theta)','theta_dot',
-                   'force']
-)
 
 
 def balance():
     base_env = 'CartPole-v1'
-    games[base_env] = cartpole_swingup
+    # See reference to WANN extern wann/domain/config.py for reference config
+
+    setup_env = gym.make(base_env)
+    setup_obs = setup_env.reset()
+
+    # TODO: make env config driven
+    cartpole_balance = config.Game(env_name=base_env,
+                            actionSelect='all',  # all, soft, hard
+                            input_size=setup_obs.shape[0],
+                            output_size=setup_env.action_space.n,
+                            time_factor=0,
+                            layers=[setup_obs.shape[0], setup_obs.shape[0]],
+                            i_act=np.full(setup_obs.shape[0], setup_env.action_space.n),
+                            h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                            o_act=np.full(setup_env.action_space.n, setup_env.action_space.n),
+                            weightCap=2.0,
+                            noise_bias=0.0,
+                            output_noise=[False, False, False],
+                            max_episode_length=200,
+                            in_out_labels=['x', 'x_dot', 'cos(theta)', 'sin(theta)', 'theta_dot',
+                                           'force']
+                            )
+    del setup_env
+    del setup_obs
+
+    games = {
+        base_env: cartpole_balance
+
+    }
 
     wtrain.init_games_config(games)
 
@@ -59,7 +65,21 @@ def balance():
         max_episode_steps=30000
     )
 
-    # wtrain.run(args)
+    wann_param_config = config.get_default_wann_hyperparams()
+    wann_param_config['task'] = base_env
+
+    # TODO: add timestamp here to keep multi results
+    outPrefix = config.RESULTS_PATH+eid
+
+    wann_args = dict(
+        hyperparam=wann_param_config,
+        outPrefix=outPrefix,
+        num_workers=mp.cpu_count(),
+        games=games
+    )
+
+    if config.SHOULD_TRAIN_WANN:
+        wtrain.run(wann_args)
 
     # TODO: add in champion selection here
     # TODO: match up training size
@@ -116,3 +136,7 @@ class CartPoleObsWrapper(gym.ObservationWrapper):
         #                  pattern=obs)
 
         return obs
+
+
+def update_champion():
+    pass

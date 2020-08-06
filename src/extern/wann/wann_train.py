@@ -17,6 +17,8 @@ from extern.wann.neat_src import * # NEAT and WANNs
 from extern.wann.domain import *   # Task environments
 
 import multiprocessing as mp
+import config
+
 
 games = None
 
@@ -253,17 +255,16 @@ def run(args):
   """Handles command line input, launches optimization or evaluation script
   depending on MPI rank.
   """
+  ''' Parse input and launch '''
   # Use MPI if parallel
-  if "parent" == mpi_fork(args.num_worker + 1): os._exit(0)
+  if "parent" == mpi_fork(args['num_workers'] + 1): os._exit(0)
 
   global fileName, hyp # Used by both master and slave processes
-  fileName    = args.outPrefix
-  hyp_default = args.default
-  hyp_adjust  = args.hyperparam
-  nWorker = args.num_worker
+  fileName    = args['outPrefix']
+  hyp  = args['hyperparam']
+  games = args['games']
 
-  hyp = loadHyp(pFileName=hyp_default)
-  updateHyp(hyp,hyp_adjust)
+  updateHyp(hyp, games)
 
   # Launch main thread and workers
   if (rank == 0):
@@ -271,26 +272,6 @@ def run(args):
   else:
     slave()
 
+
 if __name__ == "__main__":
-  ''' Parse input and launch '''
-  parser = argparse.ArgumentParser(description=('Evolve WANNs'))
-  
-  parser.add_argument('-d', '--default', type=str,\
-   help='default hyperparameter file', default='p/default_wann.json')
-
-  parser.add_argument('-p', '--hyperparam', type=str,\
-   help='hyperparameter file', default='p/laptop_swing.json')
-
-  parser.add_argument('-o', '--outPrefix', type=str,\
-   help='file name for result output', default='test')
-  
-  parser.add_argument('-n', '--num_worker', type=int,\
-   help='number of cores to use', default=mp.cpu_count())
-
-  args = parser.parse_args()
-
-
-  # Use MPI if parallel
-  if "parent" == mpi_fork(args.num_worker+1): os._exit(0)
-
-  run(args)
+  run()
