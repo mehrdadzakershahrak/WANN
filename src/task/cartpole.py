@@ -31,7 +31,7 @@ def balance():
 
     # TODO: make env config driven
     cartpole_balance = config.Game(env_name=base_env,
-                            actionSelect='all',  # all, soft, hard
+                            actionSelect='argmax',
                             input_size=setup_obs.shape[0],
                             output_size=setup_env.action_space.n,
                             time_factor=0,
@@ -67,6 +67,7 @@ def balance():
 
     wann_param_config = config.get_default_wann_hyperparams()
     wann_param_config['task'] = base_env
+    wann_param_config['maxGen'] = 5
 
     # TODO: add timestamp here to keep multi results
     outPrefix = config.RESULTS_PATH+eid

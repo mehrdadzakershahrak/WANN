@@ -84,7 +84,7 @@ class WannDataGatherer():
   def save(self, gen=(-1), saveFullPop=False):
     ''' Save data to disk '''
     filename = self.filename
-    pref = 'extern/wann/log/' + filename
+    pref = filename
 
     # --- Generation fit/complexity stats ------------------------------------ 
     gStatLabel = ['x_scale',\
