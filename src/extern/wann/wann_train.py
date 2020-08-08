@@ -271,6 +271,7 @@ def run(args):
     master()
   else:
     slave()
+    exit(0)  # workaround to close runaway slaves
 
 
 if __name__ == "__main__":

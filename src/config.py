@@ -13,6 +13,10 @@ USE_PREV_EXPERIMENT = False
 PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}{os.sep}wann-ppo2-model'
 
 SHOULD_TRAIN_WANN = False
+SHOULD_USE_WANN = True
+
+SHOW_TESTS = True
+SAVE_VIDEO_PATH = f'result{os.sep}wann-artifacts{os.sep}video{os.sep}'
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
@@ -23,7 +27,7 @@ _default_wann_hyperparams = {
     "task": None,
     "maxGen": 1024,
     "alg_nReps": 3,
-    "popSize": 1024,
+    "popSize": 192,
     "select_eliteRatio": 0.2,
     "select_tournSize": 8,
     "alg_wDist": "standard",
