@@ -9,13 +9,13 @@ RESULTS_PATH = f'result{os.sep}wann-artifacts{os.sep}'
 ARTIFACTS_PATH = 'model'
 TFBOARD_LOG_PATH = 'tf-log'
 
-USE_PREV_EXPERIMENT = False
+USE_PREV_EXPERIMENT = True
 PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}{os.sep}wann-ppo2-model'
 
 SHOULD_TRAIN_WANN = False
 SHOULD_USE_WANN = True
 
-SHOW_TESTS = True
+SHOW_TESTS = False
 SAVE_VIDEO_PATH = f'result{os.sep}wann-artifacts{os.sep}video{os.sep}'
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',

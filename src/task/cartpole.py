@@ -94,10 +94,11 @@ def balance():
     avg_rewards = []
     scores = []
     episodes = 100000
-    t_len = 30000
-    for _ in range(episodes):
+    t_len = 1000
+    for i in range(episodes):
         t = 0
-        rewards = 0
+        rewards = []
+        obs = test_env.reset()
         for _ in range(t_len):
             a, s = m.predict(obs, deterministic=True)
             a = np.array(a).item()  # workaround for [a] return value
@@ -112,18 +113,11 @@ def balance():
             rewards.append(r)
             t += 1
 
-        avg_rewards.append(rewards/float(t))
+        avg_rewards.append(np.array(rewards)/float(t))
         scores.append(t)
 
-    plot.plot_y_over_x([scores], [episodes], y_label='scores', x_label='episodes',
-                       line_labels=[''], path=VIS_RESULTS_PATH+'scores_vs_episodes.png',
-                       title='Scores vs Episodes (with WANN)',
-                       line_colors=['b'])
-
-    plot.plot_y_over_x([avg_rewards], [episodes], y_label='scores', x_label='episodes',
-                       line_labels=[''], path=VIS_RESULTS_PATH + 'scores_vs_episodes.png',
-                       title='Avg Rewards vs Episodes (with WANN)',
-                       line_colors=['b'])
+        if i % 10000 == 0:
+            print(f'Completed episode: {i}')
 
 
 def _balance_env():
