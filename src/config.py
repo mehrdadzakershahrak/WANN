@@ -5,18 +5,23 @@ from collections import namedtuple
 TASK = 'wann-cartpolebalance-v1'
 SEED = 0  # high level seed for all experiments
 
-RESULTS_PATH = f'result{os.sep}wann-artifacts{os.sep}'
+SEED_RANGE_MIN = 1
+SEED_RANGE_MAX = 100000000
+
+RESULTS_PATH = f'result/wann-artifacts/'
 ARTIFACTS_PATH = 'model'
 TFBOARD_LOG_PATH = 'tf-log'
 
-USE_PREV_EXPERIMENT = True
-PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}{os.sep}wann-ppo2-model'
+USE_PREV_EXPERIMENT = False
+PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}/wann-ppo2-model'
+
+EXPERIMENT_ID = 'without-wann'
 
 SHOULD_TRAIN_WANN = False
-SHOULD_USE_WANN = True
+SHOULD_USE_WANN = False
 
 SHOW_TESTS = False
-SAVE_VIDEO_PATH = f'result{os.sep}wann-artifacts{os.sep}video{os.sep}'
+SAVE_VIDEO_PATH = f'result/wann-artifacts/video/'
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',

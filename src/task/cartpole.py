@@ -9,15 +9,16 @@ import os
 import multiprocessing as mp
 import config
 from vis import plot
+import random
 
 # TODO: clean this up
 
-ARTIFACTS_PATH = f'{config.RESULTS_PATH}wann-ppo2-model'
-VIS_RESULTS_PATH = f'{ARTIFACTS_PATH}{os.sep}vis{os.sep}'
+ARTIFACTS_PATH = f'{config.RESULTS_PATH}wann-ppo2-model{config.EXPERIMENT_ID}{os.sep}'
+VIS_RESULTS_PATH = f'{ARTIFACTS_PATH}{os.sep}{config.EXPERIMENT_ID}{os.sep}vis{os.sep}'
 eid = None
 NUM_WORKERS = mp.cpu_count()
 
-TB_LOG_PATH = f'log{os.sep}wann-ppo2-model{os.sep}'
+TB_LOG_PATH = f'log{os.sep}wann-ppo2-model{os.sep}{config.EXPERIMENT_ID}{os.sep}'
 
 
 # TODO: update to auto save multiple experiments / reload most recent
@@ -93,11 +94,13 @@ def balance():
 
     avg_rewards = []
     scores = []
-    episodes = 100000
-    t_len = 1000
+    episodes = 10000
+    t_len = 30000
     for i in range(episodes):
         t = 0
         rewards = []
+
+        test_env.seed(random.randint(config.SEED_RANGE_MIN, config.SEED_RANGE_MAX))
         obs = test_env.reset()
         for _ in range(t_len):
             a, s = m.predict(obs, deterministic=True)
@@ -118,6 +121,8 @@ def balance():
 
         if i % 10000 == 0:
             print(f'Completed episode: {i}')
+
+    # TODO performance comparison of multiple RL algos here
 
 
 def _balance_env():
