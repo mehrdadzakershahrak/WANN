@@ -10,6 +10,9 @@ import multiprocessing as mp
 import config
 from vis import plot
 import random
+import extern.wann.vis as wann_vis
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # TODO: clean this up
 
@@ -30,26 +33,26 @@ def balance():
     setup_env = gym.make(base_env)
     setup_obs = setup_env.reset()
 
-    cartpole_balance = config.Game(env_name=base_env,
-                            actionSelect='prob',
-                            input_size=setup_obs.shape[0],
-                            output_size=setup_env.action_space.n,
-                            time_factor=0,
-                            layers=[setup_obs.shape[0], setup_obs.shape[0]],
-                            i_act=np.full(setup_obs.shape[0], setup_obs.shape[0]),
-                            h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                            o_act=np.full(setup_obs.shape[0], 1),
-                            weightCap=2.0,
-                            noise_bias=0.0,
-                            output_noise=[False, False, False],
-                            max_episode_length=30000,
-                            in_out_labels=['x', 'x_dot', 'cos(theta)', 'sin(theta)', 'theta_dot',
-                                           'force'])
+    env_config = config.Game(env_name=base_env,
+                             actionSelect='prob',
+                             input_size=setup_obs.shape[0],
+                             output_size=setup_env.action_space.n,
+                             time_factor=0,
+                             layers=[setup_obs.shape[0], setup_obs.shape[0]],
+                             i_act=np.full(setup_obs.shape[0], setup_obs.shape[0]),
+                             h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                             o_act=np.full(setup_obs.shape[0], 1),
+                             weightCap=2.0,
+                             noise_bias=0.0,
+                             output_noise=[False, False, False],
+                             max_episode_length=30000,
+                             in_out_labels=['x', 'x_dot', 'cos(theta)', 'sin(theta)', 'theta_dot',
+                                            'force'])
     del setup_env
     del setup_obs
 
     games = {
-        base_env: cartpole_balance
+        base_env: env_config
 
     }
 
@@ -64,7 +67,6 @@ def balance():
 
     wann_param_config = config.get_default_wann_hyperparams()
     wann_param_config['task'] = base_env
-    wann_param_config['maxGen'] = 5
 
     # TODO: add timestamp here to keep multi results
     outPrefix = config.RESULTS_PATH+eid
@@ -80,6 +82,18 @@ def balance():
         wtrain.run(wann_args)
 
     env = make_vec_env(eid, n_envs=mp.cpu_count())
+
+    champion_path = f'result{os.sep}wann-artifacts{os.sep}wann-cartpolebalance-v1_best.out'
+    wVec, aVec, _ = wnet.importNet(champion_path)
+
+    if config.SHOULD_VISUALIZE_WANN:
+        fig, ax = wann_vis.viewInd(champion_path, env_config)
+
+        vis_results_path = f'result{os.sep}wann-artifacts{os.sep}{config.EXPERIMENT_ID}{os.sep}vis-out{os.sep}'
+        if not os.path.isdir(vis_results_path):
+            os.makedirs(vis_results_path)
+
+        plt.savefig(f'{vis_results_path}wann-net-graph.png')
 
     if not config.USE_PREV_EXPERIMENT:
         m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH)
@@ -140,7 +154,8 @@ class CartPoleObsWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         if config.SHOULD_USE_WANN:
             obs = wnet.act(self.wVec, self.aVec,
-                             nInput=obs.shape[0],
-                             nOutput=obs.shape[0],
-                             inPattern=obs)
+                           nInput=obs.shape[0],
+                           nOutput=obs.shape[0],
+                           inPattern=obs)
+
         return obs

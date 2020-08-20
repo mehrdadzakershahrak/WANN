@@ -1,4 +1,4 @@
-from task import cartpole
+from task import cartpole, bipedal_walker
 import argparse
 from datetime import datetime
 import sys
@@ -14,6 +14,8 @@ def main():
 
     if config.TASK in ['wann-cartpolebalance-v1']:
         cartpole.balance()
+    if config.TASK in ['BipedalWalker-v2']:
+        bipedal_walker.walk()
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 

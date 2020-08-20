@@ -13,12 +13,13 @@ ARTIFACTS_PATH = 'model'
 TFBOARD_LOG_PATH = 'tf-log'
 
 USE_PREV_EXPERIMENT = False
-PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}/wann-ppo2-model'
+PREV_EXPERIMENT_PATH = f'{RESULTS_PATH}/wann-ppo2-walker-model'
 
 EXPERIMENT_ID = 'without-wann'
 
 SHOULD_TRAIN_WANN = False
-SHOULD_USE_WANN = False
+SHOULD_USE_WANN = True
+SHOULD_VISUALIZE_WANN = True
 
 SHOW_TESTS = False
 SAVE_VIDEO_PATH = f'result/wann-artifacts/video/'
@@ -30,7 +31,7 @@ Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
 
 _default_wann_hyperparams = {
     "task": None,
-    "maxGen": 1024,
+    "maxGen": 5,
     "alg_nReps": 3,
     "popSize": 192,
     "select_eliteRatio": 0.2,
