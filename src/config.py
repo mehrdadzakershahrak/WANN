@@ -10,4 +10,5 @@ TRAIN_WANN = True
 USE_WANN = True
 VISUALIZE_WANN = True
 SHOW_TESTS = True
+RENDER_TEST_GIFS = True
 ############################################

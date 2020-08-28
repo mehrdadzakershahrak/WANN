@@ -11,6 +11,8 @@ import config
 import extern.wann.vis as wann_vis
 import matplotlib.pyplot as plt
 from task_config.task_config import ALG
+import imageio
+import numpy as np
 
 
 SEED_RANGE_MIN = 1
@@ -92,6 +94,37 @@ def run(config):
         m = PPO2.load(config.PREV_EXPERIMENT_PATH)
 
     # TODO: additional test visualizations here
+    if config.RENDER_TEST_GIFS:
+        render_agent(m, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
+        render_agent(m, SAVE_GIF_PATH, filename='random.gif')
+
+
+def render_agent(model, env_name, vid_len,
+                 out_path, filename, rand_agent=False, render_gif=True):
+    if render_gif:
+        test_env = gym.make(env_name)
+
+        images = []
+        obs = test_env.reset()
+
+        for _ in range(vid_len):
+            img = test_env.render(mode='rgb_array')
+            images.append(img)
+
+            a = None
+            if rand_agent:
+                a = test_env.action_space.sample()
+            else:
+                a = model.predict(obs, deterministic=True)[0]
+
+            obs, _, done, _ = test_env.step(a)
+            if done:
+                obs = test_env.reset()
+
+            imageio.mimsave(f'{out_path}{filename}',
+                            [np.array(img) for i, image in enumerate(images) if i % 2 == 0], fps=30)
+
+            test_env.close()
 
 
 if __name__ == '__main__':
