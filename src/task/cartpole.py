@@ -45,6 +45,7 @@ def get_task_config():
         ENTRY_POINT='task.cartpole:_env',
         EXPERIMENT_ID=EXPERIMENT_ID,
         WANN_PARAM_CONFIG=wann_param_config,
+        VIDEO_LENGTH=2000,
         ALG=task_config.ALG.PPO
     )
 

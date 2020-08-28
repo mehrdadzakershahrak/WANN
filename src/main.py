@@ -95,8 +95,9 @@ def run(config):
 
     # TODO: additional test visualizations here
     if config.RENDER_TEST_GIFS:
-        render_agent(m, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
-        render_agent(m, SAVE_GIF_PATH, filename='random.gif')
+        vid_len = config['VIDEO_LENGTH']
+        render_agent(m, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif', vid_len=vid_len)
+        render_agent(m, SAVE_GIF_PATH, filename='random.gif', vid_len=vid_len)
 
 
 def render_agent(model, env_name, vid_len,
