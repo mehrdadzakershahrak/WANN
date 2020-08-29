@@ -45,7 +45,7 @@ def get_task_config():
         AGENT=dict(
             verbose=1,
             log_interval=100,
-            total_timesteps=30000
+            total_timesteps=1000
         ),
         ENTRY_POINT='task.cartpole:_env',
         EXPERIMENT_ID=EXPERIMENT_ID,

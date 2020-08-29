@@ -82,14 +82,19 @@ def run(config):
     m.learn(total_timesteps=1)
     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
-    for _ in range(run_config.NUM_TRAIN_STEPS):
+    c = 0
+    for i in range(run_config.NUM_TRAIN_STEPS):
+        print(f'LEARNING ITERATION {i}/{run_config.NUM_TRAIN_STEPS}')
         agent_params = m.get_parameters()
         agent_params = dict((key, value) for key, value in agent_params.items())
         wann_args['agent_params'] = agent_params
         wann_args['agent_env'] = m.get_env()
 
-        if run_config.TRAIN_WANN:
-            wtrain.run(wann_args)
+        if c == 0:
+            print('PERFORMING WANN TRAINING STEP...')
+            if run_config.TRAIN_WANN:
+                wtrain.run(wann_args)
+            print('WANN TRAINING STEP COMPLETE')
 
         # TODO: add callback for visualize WANN interval as well as
         # gif sampling at different stages
@@ -100,18 +105,23 @@ def run(config):
             wann_vis.viewInd(champion_path, GAME_CONFIG)
             plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
 
+        # TODO: add checkpointing and restore from checkpoint
         agent_config = config['AGENT']
         m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'])
         m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
-        if run_config.RENDER_TEST_GIFS:
-            vid_len = config['VIDEO_LENGTH']
-            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
-            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
-
         # only one iteration when WANN isn't used
         if not run_config.USE_WANN:
             break
+
+        c += 1
+        if c >= run_config.RETRAIN_WANN_N_STEPS:
+            c = 0
+
+    if run_config.RENDER_TEST_GIFS:
+        vid_len = config['VIDEO_LENGTH']
+        render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
+        render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
 
 def render_agent(model, env_name, vid_len,
