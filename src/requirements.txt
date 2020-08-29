@@ -9,7 +9,7 @@ scikit-learn
 pyarrow
 scipy
 opencv-contrib-python
-tensorflow-gpu==1.14
+tensorflow-gpu==1.15
 mpi4py==3.0.3
 seaborn
 networkx
@@ -19,4 +19,3 @@ stable-baselines[mpi]
 gym-retro
 procgen
 Box2D==2.3.10
-imgio==2.9.0

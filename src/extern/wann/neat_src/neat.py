@@ -158,8 +158,6 @@ def loadHyp(pFileName, printHyp=False):
   else:
     hyp['ann_actRange'] = np.full_like(task.actRange,hyp['alg_act'])
 
-
-
   if printHyp is True:
     print(json.dumps(hyp, indent=4, sort_keys=True))
   return hyp
@@ -169,7 +167,8 @@ def updateHyp(hyp, games):
   """Overwrites default hyperparameters with those from second .json file
   """
   # Task hyper parameters
-  task = GymTask(games[hyp['task']], paramOnly=True)
+  task = GymTask(games[hyp['task']], paramOnly=True, agent_params=hyp['agent_params'],
+                 agent_env=hyp['agent_env'])
   hyp['ann_nInput'] = task.nInput
   hyp['ann_nOutput'] = task.nOutput
   hyp['ann_initAct'] = task.activations[0]

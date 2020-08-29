@@ -6,6 +6,8 @@ import argparse
 import subprocess
 import numpy as np
 np.set_printoptions(precision=2, linewidth=160) 
+import tensorflow as tf
+tf.get_logger().setLevel('INFO')
 
 # MPI
 from mpi4py import MPI
@@ -72,9 +74,9 @@ def gatherData(data,alg,gen,hyp,savePop=False):
 
   if savePop is True: # Get a sample pop to play with in notebooks    
     global fileName
-    pref = 'log/' + fileName
+
     import pickle
-    with open(pref+'_pop.obj', 'wb') as fp:
+    with open(fileName+'_pop.obj', 'wb') as fp:
       pickle.dump(alg.pop,fp)
 
   return data
@@ -189,8 +191,9 @@ def slave():
   PseudoReturn (sent to master):
     result - (float)    - fitness value of network
   """
-  global hyp  
-  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'])
+  global hyp
+  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
+                     agent_env=agent_env)
 
   # Evaluate any weight vectors sent this way
   while True:
@@ -259,10 +262,16 @@ def run(args):
   # Use MPI if parallel
   if "parent" == mpi_fork(args['num_workers'] + 1): os._exit(0)
 
-  global fileName, hyp # Used by both master and slave processes
+  global fileName, hyp, agent_params, agent_env # Used by both master and slave processes
   fileName    = args['outPrefix']
   hyp  = args['hyperparam']
-  games = args['games']
+
+  # TODO: clean this up HACK
+  hyp['agent_params'] = args['agent_params']
+  hyp['agent_env'] = args['agent_env']
+
+  agent_params = args['agent_params']
+  agent_env = args['agent_env']
 
   updateHyp(hyp, games)
 

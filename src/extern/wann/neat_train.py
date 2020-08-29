@@ -61,7 +61,7 @@ def gatherData(data,alg,gen,hyp,savePop=False):
 
   if savePop is True: # Get a sample pop to play with in notebooks    
     global fileName
-    pref = 'log/' + fileName
+    pref = fileName
     import pickle
     with open(pref+'_pop.obj', 'wb') as fp:
       pickle.dump(alg.pop,fp)

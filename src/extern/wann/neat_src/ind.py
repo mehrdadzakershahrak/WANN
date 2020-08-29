@@ -181,7 +181,6 @@ class Ind():
     connG = np.copy(self.conn)
     nodeG = np.copy(self.node)
 
-    
     # - Re-enable connections
     disabled  = np.where(connG[4,:] == 0)[0]
     reenabled = np.random.rand(1,len(disabled)) < p['prob_enable']

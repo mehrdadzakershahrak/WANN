@@ -6,6 +6,7 @@
 __pycache_
 src/log/**
 
+result
 
 .DS_STORE
 src/.DS_STORE

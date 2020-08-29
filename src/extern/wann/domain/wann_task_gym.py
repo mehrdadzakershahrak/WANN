@@ -9,7 +9,8 @@ from extern.wann.neat_src import *
 class WannGymTask(GymTask):
   """Problem domain to be solved by neural network. Uses OpenAI Gym patterns.
   """ 
-  def __init__(self, game, paramOnly=False, nReps=1): 
+  def __init__(self, game, paramOnly=False, nReps=1, agent_params=None,
+               agent_env=None):
     """Initializes task environment
   
     Args:
@@ -20,7 +21,7 @@ class WannGymTask(GymTask):
       nReps     - (nReps) - number of trials to get average fitness
     """
 
-    GymTask.__init__(self, game, paramOnly, nReps)
+    GymTask.__init__(self, game, paramOnly, nReps, agent_params, agent_env)
 
 
 # -- 'Weight Agnostic Network' evaluation -------------------------------- -- #

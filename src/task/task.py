@@ -6,6 +6,7 @@ import gym
 from extern.wann.neat_src import ann as wnet
 import os
 
+
 class ALG(enum.Enum):
     PPO = 1
     DDPG = 2
@@ -15,11 +16,11 @@ class ALG(enum.Enum):
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
                            'o_act', 'weightCap', 'noise_bias', 'output_noise',
-                           'max_episode_length', 'in_out_labels'])
+                           'max_episode_length', 'alg', 'artifacts_path', 'in_out_labels'])
 
 _DEFAULT_WANN_HYPERPARAMS = {
     "task": None,
-    "maxGen": 1024,
+    "maxGen": 1,
     "alg_nReps": 3,
     "popSize": 192,
     "select_eliteRatio": 0.2,
@@ -42,6 +43,7 @@ _DEFAULT_WANN_HYPERPARAMS = {
 }
 
 RESULTS_PATH = f'result{os.sep}'
+MODEL_ARTIFACT_FILENAME = 'primary-model'
 
 
 class ObsWrapper(gym.ObservationWrapper):

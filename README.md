@@ -13,7 +13,7 @@ as well as in any commercial product that bring benefits to mankind.
 
 #INSTALLATION
 
-# TODO: complete me
+conda install -c conda-forge imageio
 
 # Installation of PyTorch on windows platform(s)
 pip install torch==1.5.1 torchvision -f https://download.pytorch.org/whl/torch_stable.html
