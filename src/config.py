@@ -1,17 +1,15 @@
 import os
 
 # GLOBAL CONFIGURABLE PARAMETERS
-# TODO: make GLOBAL CONFIGS YML driven
+# DEFAULT CONFIGURATION
 ############################################
-TASK = 'cartpole-balance'
-EXPERIMENT_ID = 'wann-cartpolebalance-v1'
+TASK = '{ENTER TEST HERE}'
+EXPERIMENT_ID = '{ENTER EXPERIMENT ID HERE}'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
-TRAIN_WANN = True
-USE_WANN = True
+TRAIN_WANN = False
+USE_WANN = False
 VISUALIZE_WANN = False
-SHOW_TESTS = True
-RENDER_TEST_GIFS = True
+RENDER_TEST_GIFS = False
 NUM_TRAIN_STEPS = 30
-RENDER_TEST_GIFS = True
 ############################################

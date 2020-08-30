@@ -17,6 +17,9 @@ import sys
 from mpi4py import MPI
 import subprocess
 import tensorflow as tf
+from os.path import isfile, join
+from os import listdir
+
 tf.get_logger().setLevel('FATAL')
 
 comm = MPI.COMM_WORLD
@@ -89,7 +92,7 @@ def run(config):
             raise Exception(f'Algorithm configured is not currently supported')
 
     # Take one step first without WANN to ensure primary algorithm model artifacts are stored
-    m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='_primary-model')
+    m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
     # Use MPI if parallel
@@ -139,7 +142,14 @@ def run(config):
             render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
             render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
+    clean_up_dir(TB_LOG_PATH)
     wtrain.run({}, kill_slaves=True)
+
+
+def clean_up_dir(path, del_prefix='__'):
+    files = [fn for fn in listdir(path) if isfile(join(path, fn)) if del_prefix in fn]
+    for fn in files:
+        os.remove(join(path, fn))
 
 
 def mpi_fork(n):

@@ -1,7 +1,4 @@
 import numpy as np
-# np.set_printoptions(precision=2, linewidth=160)
-from silence_tensorflow import silence_tensorflow
-silence_tensorflow()
 import tensorflow as tf
 tf.get_logger().setLevel('ERROR')
 
