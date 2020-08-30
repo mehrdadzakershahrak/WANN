@@ -93,5 +93,3 @@ class WannGymTask(GymTask):
     if returnVals is True:
       return np.mean(reward,axis=0), wVals
     return np.mean(reward,axis=0)
- 
-

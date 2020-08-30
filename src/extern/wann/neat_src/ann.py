@@ -315,4 +315,3 @@ def importNet(fileName):
   wKey = np.where(wVec!=0)[0] 
 
   return wVec, aVec, wKey
-

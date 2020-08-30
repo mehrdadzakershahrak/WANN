@@ -120,7 +120,7 @@ def run(config):
             # TODO: add checkpointing and restore from checkpoint
             agent_config = config['AGENT']
             m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
-                    reset_num_timesteps=False, tb_log_name='primary-model')
+                    reset_num_timesteps=True, tb_log_name='primary-model')
             m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
             # only one iteration when WANN isn't used
