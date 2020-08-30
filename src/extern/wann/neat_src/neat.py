@@ -158,9 +158,9 @@ def loadHyp(pFileName, printHyp=False):
   else:
     hyp['ann_actRange'] = np.full_like(task.actRange,hyp['alg_act'])
 
-  if printHyp is True:
-    print(json.dumps(hyp, indent=4, sort_keys=True))
-  return hyp
+  # if printHyp is True:
+  #   print(json.dumps(hyp, indent=4, sort_keys=True))
+  # return hyp
 
 
 def updateHyp(hyp, games):

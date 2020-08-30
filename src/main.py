@@ -13,7 +13,13 @@ from task import task
 import imageio
 import numpy as np
 import config as run_config
+import sys
+from mpi4py import MPI
+import subprocess
+import tensorflow as tf
+tf.get_logger().setLevel('FATAL')
 
+comm = MPI.COMM_WORLD
 
 SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
@@ -38,6 +44,8 @@ def run(config):
     TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{EXPERIMENT_ID}{os.sep}'
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
 
+    NUM_WORKERS = config['NUM_WORKERS']
+
     paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX]
     for p in paths:
         if not os.path.isdir(p):
@@ -61,7 +69,7 @@ def run(config):
     wann_args = dict(
         hyperparam=wann_param_config,
         outPrefix=WANN_OUT_PREFIX,
-        num_workers=mp.cpu_count(),
+        num_workers=NUM_WORKERS,
         games=games
     )
 
@@ -82,46 +90,81 @@ def run(config):
     m.learn(total_timesteps=1)
     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
-    c = 0
+    # Use MPI if parallel
+    if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
+
     for i in range(run_config.NUM_TRAIN_STEPS):
-        print(f'LEARNING ITERATION {i}/{run_config.NUM_TRAIN_STEPS}')
+        if rank == 0 and i % 100 == 0:
+            print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
         agent_params = m.get_parameters()
         agent_params = dict((key, value) for key, value in agent_params.items())
         wann_args['agent_params'] = agent_params
         wann_args['agent_env'] = m.get_env()
+        wann_args['slaves_alive'] = True
+        wann_args['rank'] = rank
+        wann_args['nWorker'] = nWorker
 
-        if c == 0:
-            print('PERFORMING WANN TRAINING STEP...')
-            if run_config.TRAIN_WANN:
-                wtrain.run(wann_args)
-            print('WANN TRAINING STEP COMPLETE')
+        if run_config.TRAIN_WANN:
+            wtrain.run(wann_args)
 
-        # TODO: add callback for visualize WANN interval as well as
-        # gif sampling at different stages
-        if run_config.VISUALIZE_WANN:
-            champion_path = f'{WANN_OUT_PREFIX}_best.out'
-            wVec, aVec, _ = wnet.importNet(champion_path)
+        if rank == 0:  # if main process
+            # TODO: add callback for visualize WANN interval as well as
+            # gif sampling at different stages
+            if run_config.VISUALIZE_WANN:
+                champion_path = f'{WANN_OUT_PREFIX}_best.out'
+                wVec, aVec, _ = wnet.importNet(champion_path)
 
-            wann_vis.viewInd(champion_path, GAME_CONFIG)
-            plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
+                wann_vis.viewInd(champion_path, GAME_CONFIG)
+                plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
 
-        # TODO: add checkpointing and restore from checkpoint
-        agent_config = config['AGENT']
-        m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'])
-        m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+            # TODO: add checkpointing and restore from checkpoint
+            agent_config = config['AGENT']
+            m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
+                    reset_num_timesteps=False, tb_log_name='primary-model')
+            m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
-        # only one iteration when WANN isn't used
-        if not run_config.USE_WANN:
-            break
+            # only one iteration when WANN isn't used
+            if not run_config.USE_WANN:
+                break
+        else:
+            break  # break if subprocess
 
-        c += 1
-        if c >= run_config.RETRAIN_WANN_N_STEPS:
-            c = 0
+        if rank == 0 and i % 100 == 0:
+            print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
-    if run_config.RENDER_TEST_GIFS:
-        vid_len = config['VIDEO_LENGTH']
-        render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
-        render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
+    if rank == 0:  # if main process
+        if run_config.RENDER_TEST_GIFS:
+            vid_len = config['VIDEO_LENGTH']
+            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
+            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
+
+
+def mpi_fork(n):
+  """Re-launches the current script with workers
+  Returns "parent" for original parent, "child" for MPI children
+  (from https://github.com/garymcintire/mpi_util/)
+  """
+  if n<=1:
+    return "child"
+  if os.getenv("IN_MPI") is None:
+    env = os.environ.copy()
+    env.update(
+      MKL_NUM_THREADS="1",
+      OMP_NUM_THREADS="1",
+      IN_MPI="1"
+    )
+
+    # TODO: check if linux or windows here
+    # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
+    # ADDED local mod to work with Win 10
+    subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
+
+    return "parent"
+  else:
+    global nWorker, rank
+    nWorker = comm.Get_size()
+    rank = comm.Get_rank()
+    return "child"
 
 
 def render_agent(model, env_name, vid_len,

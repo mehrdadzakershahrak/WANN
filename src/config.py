@@ -11,7 +11,6 @@ USE_WANN = True
 VISUALIZE_WANN = False
 SHOW_TESTS = True
 RENDER_TEST_GIFS = True
-NUM_TRAIN_STEPS = 2000000
-RETRAIN_WANN_N_STEPS = 100
-RENDER_TEST_GIFS = False
+NUM_TRAIN_STEPS = 30
+RENDER_TEST_GIFS = True
 ############################################

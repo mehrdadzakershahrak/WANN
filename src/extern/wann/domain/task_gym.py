@@ -6,6 +6,10 @@ from extern.wann.neat_src import *
 from stable_baselines import PPO2
 from task import task
 from stable_baselines.common.policies import MlpPolicy
+from silence_tensorflow import silence_tensorflow
+silence_tensorflow()
+import tensorflow as tf
+tf.get_logger().setLevel('FATAL')
 
 
 class GymTask():
@@ -43,6 +47,7 @@ class GymTask():
     self.alg      = game.alg
     if self.alg == task.ALG.PPO:
       # TODO: make network policy config driven
+
       agent = PPO2(MlpPolicy, agent_env, verbose=0) # TODO: integrate with MPI from top level for performance
       agent.load_parameters(agent_params)
 
@@ -117,8 +122,11 @@ class GymTask():
     annOut = act(wVec, aVec, self.nInput, self.nOutput, state)
 
     # TODO: add passthrough for deterministic vs stochastic output
-    action, state = self.agent.predict(annOut, deterministic=True)
-    action = np.array(action)[0]
+
+    with tf.device('/cpu:0'):
+      action, state = self.agent.predict(annOut, deterministic=True)
+      action = np.array(action)[0]
+
     # previous prediction:
     # action = selectAct(annOut,self.actSelect)
 
@@ -137,8 +145,10 @@ class GymTask():
     for tStep in range(self.maxEpisodeLength): 
       annOut = act(wVec, aVec, self.nInput, self.nOutput, state) 
       # action = selectAct(annOut,self.actSelect)
-      action, state = self.agent.predict(annOut, deterministic=True)
-      action = np.array(action)[0]
+
+      with tf.device('/cpu:0'):
+        action, state = self.agent.predict(annOut, deterministic=True)
+        action = np.array(action)[0]
 
       state, reward, done, info = self.env.step(action)
       totalReward += reward  

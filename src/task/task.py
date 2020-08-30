@@ -20,7 +20,7 @@ Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
 
 _DEFAULT_WANN_HYPERPARAMS = {
     "task": None,
-    "maxGen": 1,
+    "maxGen": 100,
     "alg_nReps": 3,
     "popSize": 192,
     "select_eliteRatio": 0.2,

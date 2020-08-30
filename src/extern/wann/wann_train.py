@@ -1,26 +1,17 @@
-import os
-import sys
-import time
-import math
-import argparse
-import subprocess
 import numpy as np
-np.set_printoptions(precision=2, linewidth=160) 
+# np.set_printoptions(precision=2, linewidth=160)
+from silence_tensorflow import silence_tensorflow
+silence_tensorflow()
 import tensorflow as tf
-tf.get_logger().setLevel('INFO')
+tf.get_logger().setLevel('ERROR')
 
 # MPI
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
 
 # prettyNeat
 from extern.wann.neat_src import * # NEAT and WANNs
 from extern.wann.domain import *   # Task environments
-
-import multiprocessing as mp
-import config
-
 
 games = None
 
@@ -50,7 +41,7 @@ def master():
   data = gatherData(data,alg,gen,hyp,savePop=True)
   data.save()
   data.savePop(alg.pop,fileName) # Save population as 2D numpy arrays
-  stopAllWorkers()
+  # stopAllWorkers()
 
 def gatherData(data,alg,gen,hyp,savePop=False):
   """Collects run data, saves it to disk, and exports pickled population
@@ -176,7 +167,7 @@ def batchMpiEval(pop, sameSeedForEachIndividual=True):
       i+=1
   return reward
 
-def slave():
+def slave(task):
   """Evaluation process: evaluates networks sent from master process. 
 
   PseudoArgs (recieved from master):
@@ -191,28 +182,25 @@ def slave():
   PseudoReturn (sent to master):
     result - (float)    - fitness value of network
   """
-  global hyp
-  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
-                     agent_env=agent_env)
 
   # Evaluate any weight vectors sent this way
-  while True:
-    n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
-    if n_wVec > 0:
-      wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
-      comm.Recv(wVec, source=0,  tag=2) # recieve weights
+  # while True:
+  n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
+  if n_wVec > 0:
+    wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
+    comm.Recv(wVec, source=0,  tag=2) # recieve weights
 
-      n_aVec = comm.recv(source=0,tag=3)# how long is the array that's coming?
-      aVec = np.empty(n_aVec, dtype='d')# allocate space to receive activation
-      comm.Recv(aVec, source=0,  tag=4) # recieve it
-      seed = comm.recv(source=0, tag=5) # random seed as int
+    n_aVec = comm.recv(source=0,tag=3)# how long is the array that's coming?
+    aVec = np.empty(n_aVec, dtype='d')# allocate space to receive activation
+    comm.Recv(aVec, source=0,  tag=4) # recieve it
+    seed = comm.recv(source=0, tag=5) # random seed as int
 
-      result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
-      comm.Send(result, dest=0)            # send it back
+    result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
+    comm.Send(result, dest=0)            # send it back
 
-    if n_wVec < 0: # End signal recieved
-      print('Worker # ', rank, ' shutting down.')
-      break
+    # if n_wVec < 0: # End signal recieved
+    #   print('Worker # ', rank, ' shutting down.')
+    #   break
 
 def stopAllWorkers():
   """Sends signal to all workers to shutdown.
@@ -223,46 +211,11 @@ def stopAllWorkers():
   for iWork in range(nSlave):
     comm.send(-1, dest=(iWork)+1, tag=1)
 
-def mpi_fork(n):
-  """Re-launches the current script with workers
-  Returns "parent" for original parent, "child" for MPI children
-  (from https://github.com/garymcintire/mpi_util/)
-  """
-  if n<=1:
-    return "child"
-  if os.getenv("IN_MPI") is None:
-    env = os.environ.copy()
-    env.update(
-      MKL_NUM_THREADS="1",
-      OMP_NUM_THREADS="1",
-      IN_MPI="1"
-    )
-    print( ["mpirun", "-np", str(n), sys.executable] + sys.argv)
-
-    # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
-    # local mod to work with Win 10
-    subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
-
-    return "parent"
-  else:
-    global nWorker, rank
-    nWorker = comm.Get_size()
-    rank = comm.Get_rank()
-    #print('assigning the rank and nworkers', nWorker, rank)
-    return "child"
-
-
 # -- Input Parsing ------------------------------------------------------- -- #
 
-def run(args):
-  """Handles command line input, launches optimization or evaluation script
-  depending on MPI rank.
-  """
-  ''' Parse input and launch '''
-  # Use MPI if parallel
-  if "parent" == mpi_fork(args['num_workers'] + 1): os._exit(0)
 
-  global fileName, hyp, agent_params, agent_env # Used by both master and slave processes
+def run(args):
+  global fileName, hyp, agent_params, agent_env, rank, nWorker # Used by both master and slave processes
   fileName    = args['outPrefix']
   hyp  = args['hyperparam']
 
@@ -272,15 +225,26 @@ def run(args):
 
   agent_params = args['agent_params']
   agent_env = args['agent_env']
+  rank = args['rank']
+  nWorker = args['nWorker']
 
   updateHyp(hyp, games)
 
+  slaves_alive = args['slaves_alive']
   # Launch main thread and workers
+
   if (rank == 0):
+    print('PERFORMING WANN TRAINING STEP...')
     master()
+    print('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
-    slave()
-    exit(0)  # workaround to close runaway slaves
+    task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
+                       agent_env=agent_env)
+    while slaves_alive:
+      slave(task)
+
+    stopAllWorkers()
+    exit(0)
 
 
 if __name__ == "__main__":

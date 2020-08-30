@@ -20,10 +20,12 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
+    wann_param_config['maxGen'] = 1
+    wann_param_config['popSize'] = 192
 
     task_config = dict(
         WANN_ENV_ID='wann-cartpolebalance-v1', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
-        NUM_WORKERS=mp.cpu_count(),
+        NUM_WORKERS=5,
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
                               actionSelect='prob',
                               input_size=setup_obs.shape[0],
@@ -44,7 +46,7 @@ def get_task_config():
         MAX_EPISODE_STEPS=30000,
         AGENT=dict(
             verbose=1,
-            log_interval=100,
+            log_interval=10,
             total_timesteps=1000
         ),
         ENTRY_POINT='task.cartpole:_env',
