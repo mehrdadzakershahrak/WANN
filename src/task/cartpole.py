@@ -20,7 +20,7 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 1
+    wann_param_config['maxGen'] = 3
     wann_param_config['popSize'] = 192
 
     task_config = dict(

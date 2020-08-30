@@ -21,6 +21,8 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
+    wann_param_config['maxGen'] = 10
+    wann_param_config['popSize'] = 1024
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
@@ -50,7 +52,7 @@ def get_task_config():
         AGENT=dict(
             verbose=1,
             log_interval=5,
-            total_timesteps=1000
+            total_timesteps=10000
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,

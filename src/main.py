@@ -28,16 +28,6 @@ SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
 
 
-# TODO: proper logging
-def main():
-    if run_config.TASK in ['cartpole-balance']:
-        run(cartpole.get_task_config())
-    if run_config.TASK in ['bipedal-walker']:
-        run(cartpole.get_task_config())
-    else:
-        raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
-
-
 def run(config):
     RESULTS_PATH = config['RESULTS_PATH']
     ARTIFACTS_PATH = f'{RESULTS_PATH}artifact{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
@@ -201,6 +191,16 @@ def render_agent(model, env_name, vid_len,
 
                 imageio.mimsave(f'{out_path}{filename}',
                                 [np.array(img) for i, image in enumerate(images) if i % 2 == 0], fps=30)
+
+
+# TODO: proper logging
+def main():
+    if run_config.TASK in ['cartpole-balance']:
+        run(cartpole.get_task_config())
+    if run_config.TASK in ['bipedal-walker']:
+        run(cartpole.get_task_config())
+    else:
+        raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 
 
 if __name__ == '__main__':
