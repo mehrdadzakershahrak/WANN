@@ -37,11 +37,10 @@ def main():
 
 def run(config):
     RESULTS_PATH = config['RESULTS_PATH']
-    EXPERIMENT_ID = config['EXPERIMENT_ID']
-    ARTIFACTS_PATH = f'{RESULTS_PATH}artifact{os.sep}{EXPERIMENT_ID}{os.sep}'
-    VIS_RESULTS_PATH = f'{RESULTS_PATH}vis{os.sep}{EXPERIMENT_ID}{os.sep}'
+    ARTIFACTS_PATH = f'{RESULTS_PATH}artifact{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
+    VIS_RESULTS_PATH = f'{RESULTS_PATH}vis{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
     SAVE_GIF_PATH = f'{RESULTS_PATH}gif{os.sep}'
-    TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{EXPERIMENT_ID}{os.sep}'
+    TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
 
     NUM_WORKERS = config['NUM_WORKERS']
@@ -78,7 +77,7 @@ def run(config):
     else:
         if GAME_CONFIG.alg == task.ALG.PPO:
             env = make_vec_env(ENV_NAME, n_envs=mp.cpu_count())
-            m = PPO2(MlpPolicy, env, verbose=0, tensorboard_log=TB_LOG_PATH)
+            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH)
         elif GAME_CONFIG.alg == task.ALG.DDPG:
             pass
         elif GAME_CONFIG.alg == task.ALG.TD3:
@@ -87,7 +86,7 @@ def run(config):
             raise Exception(f'Algorithm configured is not currently supported')
 
     # Take one step first without WANN to ensure primary algorithm model artifacts are stored
-    m.learn(total_timesteps=1)
+    m.learn(total_timesteps=1, reset_num_timesteps=True, tb_log_name='_primary-model')
     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
     # Use MPI if parallel
@@ -135,7 +134,7 @@ def run(config):
     if rank == 0:  # if main process
         if run_config.RENDER_TEST_GIFS:
             vid_len = config['VIDEO_LENGTH']
-            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{EXPERIMENT_ID}-agent.gif')
+            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
             render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
 

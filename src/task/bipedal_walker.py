@@ -4,14 +4,15 @@ import numpy as np
 import copy
 from task import task
 import os
+import config
 
 # TODO: add yml config binding
 # TODO: simplify this further
 
 # TODO: add generated date timestamp for unique experiment id cycled by x experiments
-EXPERIMENT_ID = 'wann-bipedalwalker2-v3'
+# EXPERIMENT_ID = 'wann-bipedalwalker2-v3'
 ENV_NAME = 'BipedalWalker-v3'
-WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{EXPERIMENT_ID}{os.sep}wann{os.sep}'
+WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}wann{os.sep}'
 
 
 def get_task_config():
@@ -38,7 +39,7 @@ def get_task_config():
                   output_noise=[False, False, False],
                   max_episode_length=400,
                   alg=task.ALG.PPO,
-                  artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{EXPERIMENT_ID}{os.sep}',
+                  artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
                   'hull_angle','hull_vel_angle','vel_x','vel_y',
                   'hip1_angle','hip1_speed','knee1_angle','knee1_speed','leg1_contact',
@@ -52,7 +53,6 @@ def get_task_config():
             total_timesteps=1000
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
-        EXPERIMENT_ID=EXPERIMENT_ID,
         WANN_PARAM_CONFIG=wann_param_config,
         VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH

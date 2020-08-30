@@ -4,6 +4,7 @@ import os
 # TODO: make GLOBAL CONFIGS YML driven
 ############################################
 TASK = 'cartpole-balance'
+EXPERIMENT_ID = 'wann-cartpolebalance-v1'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 TRAIN_WANN = True
