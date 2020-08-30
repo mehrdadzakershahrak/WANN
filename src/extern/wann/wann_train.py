@@ -41,7 +41,7 @@ def master():
   data = gatherData(data,alg,gen,hyp,savePop=True)
   data.save()
   data.savePop(alg.pop,fileName) # Save population as 2D numpy arrays
-  # stopAllWorkers()
+
 
 def gatherData(data,alg,gen,hyp,savePop=False):
   """Collects run data, saves it to disk, and exports pickled population
@@ -167,7 +167,7 @@ def batchMpiEval(pop, sameSeedForEachIndividual=True):
       i+=1
   return reward
 
-def slave(task):
+def slave():
   """Evaluation process: evaluates networks sent from master process. 
 
   PseudoArgs (recieved from master):
@@ -182,25 +182,26 @@ def slave(task):
   PseudoReturn (sent to master):
     result - (float)    - fitness value of network
   """
+  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
+                     agent_env=agent_env)
+  while True:
+    # Evaluate any weight vectors sent this way
+    # while True:
+    n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
+    if n_wVec > 0:
+      wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
+      comm.Recv(wVec, source=0,  tag=2) # recieve weights
 
-  # Evaluate any weight vectors sent this way
-  # while True:
-  n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
-  if n_wVec > 0:
-    wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
-    comm.Recv(wVec, source=0,  tag=2) # recieve weights
+      n_aVec = comm.recv(source=0,tag=3)# how long is the array that's coming?
+      aVec = np.empty(n_aVec, dtype='d')# allocate space to receive activation
+      comm.Recv(aVec, source=0,  tag=4) # recieve it
+      seed = comm.recv(source=0, tag=5) # random seed as int
 
-    n_aVec = comm.recv(source=0,tag=3)# how long is the array that's coming?
-    aVec = np.empty(n_aVec, dtype='d')# allocate space to receive activation
-    comm.Recv(aVec, source=0,  tag=4) # recieve it
-    seed = comm.recv(source=0, tag=5) # random seed as int
+      result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
+      comm.Send(result, dest=0)            # send it back
 
-    result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
-    comm.Send(result, dest=0)            # send it back
-
-    # if n_wVec < 0: # End signal recieved
-    #   print('Worker # ', rank, ' shutting down.')
-    #   break
+      if n_wVec < 0: # End signal recieved
+        break
 
 def stopAllWorkers():
   """Sends signal to all workers to shutdown.
@@ -214,7 +215,11 @@ def stopAllWorkers():
 # -- Input Parsing ------------------------------------------------------- -- #
 
 
-def run(args):
+def run(args, kill_slaves=False):
+  if kill_slaves:
+    stopAllWorkers()
+    return
+
   global fileName, hyp, agent_params, agent_env, rank, nWorker # Used by both master and slave processes
   fileName    = args['outPrefix']
   hyp  = args['hyperparam']
@@ -230,20 +235,12 @@ def run(args):
 
   updateHyp(hyp, games)
 
-  slaves_alive = args['slaves_alive']
-  # Launch main thread and workers
-
   if (rank == 0):
     print('PERFORMING WANN TRAINING STEP...')
     master()
     print('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
-    task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
-                       agent_env=agent_env)
-    while slaves_alive:
-      slave(task)
-
-    stopAllWorkers()
+    slave()
     exit(0)
 
 

@@ -77,7 +77,10 @@ def run(config):
     else:
         if GAME_CONFIG.alg == task.ALG.PPO:
             env = make_vec_env(ENV_NAME, n_envs=mp.cpu_count())
-            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH)
+
+            # TODO: configuration for hyperparameters
+            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
+                     full_tensorboard_log=True)
         elif GAME_CONFIG.alg == task.ALG.DDPG:
             pass
         elif GAME_CONFIG.alg == task.ALG.TD3:
@@ -86,7 +89,7 @@ def run(config):
             raise Exception(f'Algorithm configured is not currently supported')
 
     # Take one step first without WANN to ensure primary algorithm model artifacts are stored
-    m.learn(total_timesteps=1, reset_num_timesteps=True, tb_log_name='_primary-model')
+    m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='_primary-model')
     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
     # Use MPI if parallel
@@ -99,7 +102,6 @@ def run(config):
         agent_params = dict((key, value) for key, value in agent_params.items())
         wann_args['agent_params'] = agent_params
         wann_args['agent_env'] = m.get_env()
-        wann_args['slaves_alive'] = True
         wann_args['rank'] = rank
         wann_args['nWorker'] = nWorker
 
@@ -136,6 +138,8 @@ def run(config):
             vid_len = config['VIDEO_LENGTH']
             render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
             render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
+
+    wtrain.run({}, kill_slaves=True)
 
 
 def mpi_fork(n):
