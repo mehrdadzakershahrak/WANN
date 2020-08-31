@@ -39,7 +39,7 @@ def get_task_config():
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=100,
+                  max_episode_length=300,
                   alg=task.ALG.PPO,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[

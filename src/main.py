@@ -97,7 +97,7 @@ def run(config):
     if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
 
     if run_config.START_FROM_LAST_RUN:
-        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rp') as f:
+        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rb') as f:
             run_track = pickle.load(f)
     else:
         run_track = dict(
@@ -128,7 +128,7 @@ def run(config):
             alg_step=True,
             total_steps=total_steps
         )
-        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wp') as f:
+        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
             pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         if rank == 0:  # if main process
@@ -152,7 +152,7 @@ def run(config):
                     alg_step=False,
                     total_steps=total_steps
                 )
-                with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wp') as f:
+                with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
                     pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
 
                 # only one iteration when WANN isn't used
