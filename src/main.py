@@ -75,7 +75,8 @@ def run(config):
         m = PPO2.load(run_config.PREV_EXPERIMENT_PATH)
     else:
         if GAME_CONFIG.alg == task.ALG.PPO:
-            env = make_vec_env(ENV_NAME, n_envs=mp.cpu_count())
+            ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+            env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
 
             if run_config.START_FROM_LAST_RUN:
                 m = PPO2.load(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
