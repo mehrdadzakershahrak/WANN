@@ -130,7 +130,7 @@ def run(config):
                     wann_vis.viewInd(champion_path, GAME_CONFIG)
                     plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
 
-                if i == 0:
+                if i == 1:
                     if GAME_CONFIG.alg == task.ALG.PPO:
                         ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
                         env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
