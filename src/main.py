@@ -74,26 +74,10 @@ def run(config):
     if run_config.USE_PREV_EXPERIMENT:
         m = PPO2.load(run_config.PREV_EXPERIMENT_PATH)
     else:
-        if GAME_CONFIG.alg == task.ALG.PPO:
-            ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-            env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
-
-            if run_config.START_FROM_LAST_RUN:
-                m = PPO2.load(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
-            else:
-                # TODO: configuration for hyperparameters
-                m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
-                         full_tensorboard_log=True)
-        elif GAME_CONFIG.alg == task.ALG.DDPG:
-            pass
-        elif GAME_CONFIG.alg == task.ALG.TD3:
-            pass
-        else:
-            raise Exception(f'Algorithm configured is not currently supported')
-
-    if not run_config.USE_PREV_EXPERIMENT:
         if not run_config.START_FROM_LAST_RUN:
             # Take one step first without WANN to ensure primary algorithm model artifacts are stored
+            onestep_env = make_vec_env(ENV_NAME, n_envs=1)
+            m = PPO2(MlpPolicy, onestep_env, verbose=0)
             m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
             m.save(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
 
@@ -145,6 +129,24 @@ def run(config):
 
                     wann_vis.viewInd(champion_path, GAME_CONFIG)
                     plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
+
+                if i == 0:
+                    if GAME_CONFIG.alg == task.ALG.PPO:
+                        ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+                        env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
+
+                        if run_config.START_FROM_LAST_RUN:
+                            m = PPO2.load(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
+                        else:
+                            # TODO: configuration for hyperparameters
+                            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
+                                     full_tensorboard_log=True)
+                    elif GAME_CONFIG.alg == task.ALG.DDPG:
+                        pass
+                    elif GAME_CONFIG.alg == task.ALG.TD3:
+                        pass
+                    else:
+                        raise Exception(f'Algorithm configured is not currently supported')
 
                 if run_track['alg_step']:
                     agent_config = config['AGENT']
