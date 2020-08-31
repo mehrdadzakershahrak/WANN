@@ -22,7 +22,7 @@ def get_task_config():
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
     wann_param_config['maxGen'] = 10
-    wann_param_config['popSize'] = 1024
+    wann_param_config['popSize'] = 192
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
@@ -39,7 +39,7 @@ def get_task_config():
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=400,
+                  max_episode_length=100,
                   alg=task.ALG.PPO,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[

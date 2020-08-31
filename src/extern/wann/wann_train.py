@@ -1,5 +1,7 @@
 import numpy as np
 import tensorflow as tf
+import os
+import pickle
 tf.get_logger().setLevel('ERROR')
 
 # MPI
@@ -12,6 +14,8 @@ from extern.wann.domain import *   # Task environments
 
 games = None
 
+_ALG_CHECKPOINT_PATH=f'_checkpoint{os.sep}'
+_ALG_CHECKPOINT_FN = f'alg-checkpoint.pkl'
 
 def init_games_config(g):
   global games
@@ -24,7 +28,15 @@ def master():
   """
   global fileName, hyp
   data = WannDataGatherer(fileName, hyp)
-  alg  = Wann(hyp)
+
+  if not os.path.exists(fileName+_ALG_CHECKPOINT_PATH):
+    os.makedirs(fileName+_ALG_CHECKPOINT_PATH)
+
+  if hyp['use_checkpoint']:
+    with open(fileName+_ALG_CHECKPOINT_PATH+_ALG_CHECKPOINT_FN, 'rb') as f:
+      alg = pickle.load(f)
+  else:
+    alg = Wann(hyp)
 
   for gen in range(hyp['maxGen']):        
     pop = alg.ask()            # Get newly evolved individuals from NEAT  
@@ -33,6 +45,10 @@ def master():
 
     data = gatherData(data,alg,gen,hyp)
     print(gen, '\t', data.display())
+
+    # checkpoint generation
+    with open(fileName + _ALG_CHECKPOINT_PATH + _ALG_CHECKPOINT_FN, 'wb') as f:
+      pickle.dump(alg, f, protocol=pickle.HIGHEST_PROTOCOL)
 
   # Clean up and data gathering at run end
   data = gatherData(data,alg,gen,hyp,savePop=True)
@@ -212,7 +228,7 @@ def stopAllWorkers():
 # -- Input Parsing ------------------------------------------------------- -- #
 
 
-def run(args, kill_slaves=False):
+def run(args, kill_slaves=False, use_checkpoint=False, run_train=True):
   if kill_slaves:
     stopAllWorkers()
     return
@@ -224,6 +240,7 @@ def run(args, kill_slaves=False):
   # TODO: clean this up HACK
   hyp['agent_params'] = args['agent_params']
   hyp['agent_env'] = args['agent_env']
+  hyp['use_checkpoint'] = use_checkpoint
 
   agent_params = args['agent_params']
   agent_env = args['agent_env']
@@ -233,9 +250,10 @@ def run(args, kill_slaves=False):
   updateHyp(hyp, games)
 
   if (rank == 0):
-    print('PERFORMING WANN TRAINING STEP...')
-    master()
-    print('PERFORMING WANN TRAINING STEP COMPLETE')
+    if run_train:
+      print('PERFORMING WANN TRAINING STEP...')
+      master()
+      print('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
     slave()
     exit(0)

@@ -39,7 +39,7 @@ def run():
     config.TRAIN_WANN = True
     config.USE_WANN = True
     config.RENDER_TEST_GIFS = True
-    config.NUM_TRAIN_STEPS = 2000
+    config.NUM_TRAIN_STEPS = 1000
     main()
 
     config.TASK = 'bipedal-walker'
@@ -48,7 +48,7 @@ def run():
     config.TRAIN_WANN = False
     config.USE_WANN = False
     config.RENDER_TEST_GIFS = True
-    config.NUM_TRAIN_STEPS = 2000
+    config.NUM_TRAIN_STEPS = 1000
     main()
 
 

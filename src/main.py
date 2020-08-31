@@ -19,6 +19,7 @@ import subprocess
 import tensorflow as tf
 from os.path import isfile, join
 from os import listdir
+import pickle
 
 tf.get_logger().setLevel('FATAL')
 
@@ -26,6 +27,7 @@ comm = MPI.COMM_WORLD
 
 SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
+LOG_INTERVAL = 10
 
 
 def run(config):
@@ -35,6 +37,8 @@ def run(config):
     SAVE_GIF_PATH = f'{RESULTS_PATH}gif{os.sep}'
     TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
+    RUN_CHECKPOINT = f'{RESULTS_PATH}_checkpoint{os.sep}'
+    RUN_CHECKPOINT_FN = 'run-checkpoint.pkl'
 
     NUM_WORKERS = config['NUM_WORKERS']
 
@@ -71,9 +75,12 @@ def run(config):
         if GAME_CONFIG.alg == task.ALG.PPO:
             env = make_vec_env(ENV_NAME, n_envs=mp.cpu_count())
 
-            # TODO: configuration for hyperparameters
-            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
-                     full_tensorboard_log=True)
+            if run_config.START_FROM_LAST_RUN:
+                m = PPO2.load(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+            else:
+                # TODO: configuration for hyperparameters
+                m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
+                         full_tensorboard_log=True)
         elif GAME_CONFIG.alg == task.ALG.DDPG:
             pass
         elif GAME_CONFIG.alg == task.ALG.TD3:
@@ -81,15 +88,29 @@ def run(config):
         else:
             raise Exception(f'Algorithm configured is not currently supported')
 
-    # Take one step first without WANN to ensure primary algorithm model artifacts are stored
-    m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
-    m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+    if not run_config.START_FROM_LAST_RUN:
+        # Take one step first without WANN to ensure primary algorithm model artifacts are stored
+        m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
+        m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
     # Use MPI if parallel
     if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
 
-    for i in range(run_config.NUM_TRAIN_STEPS):
-        if rank == 0 and i % 100 == 0:
+    if run_config.START_FROM_LAST_RUN:
+        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rp') as f:
+            run_track = pickle.load(f)
+    else:
+        run_track = dict(
+            wann_step=True,
+            alg_step=False,
+            total_steps=0
+        )
+
+    total_steps = run_track['total_steps']
+    for i in range(1, run_config.NUM_TRAIN_STEPS+1):
+        total_steps += 1
+
+        if rank == 0 and i % LOG_INTERVAL == 0:
             print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
         agent_params = m.get_parameters()
         agent_params = dict((key, value) for key, value in agent_params.items())
@@ -99,7 +120,16 @@ def run(config):
         wann_args['nWorker'] = nWorker
 
         if run_config.TRAIN_WANN:
-            wtrain.run(wann_args)
+            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
+                       run_train=run_track['wann_step'])
+
+        run_track = dict(
+            wann_step=False,
+            alg_step=True,
+            total_steps=total_steps
+        )
+        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wp') as f:
+            pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         if rank == 0:  # if main process
             # TODO: add callback for visualize WANN interval as well as
@@ -111,19 +141,27 @@ def run(config):
                 wann_vis.viewInd(champion_path, GAME_CONFIG)
                 plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
 
-            # TODO: add checkpointing and restore from checkpoint
-            agent_config = config['AGENT']
-            m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
-                    reset_num_timesteps=True, tb_log_name='primary-model')
-            m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+            if run_track['alg_step']:
+                agent_config = config['AGENT']
+                m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
+                        reset_num_timesteps=True, tb_log_name='primary-model')
+                m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
 
-            # only one iteration when WANN isn't used
-            if not run_config.USE_WANN:
-                break
+                run_track = dict(
+                    wann_step=True,
+                    alg_step=False,
+                    total_steps=total_steps
+                )
+                with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wp') as f:
+                    pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+                # only one iteration when WANN isn't used
+                if not run_config.USE_WANN:
+                    break
         else:
             break  # break if subprocess
 
-        if rank == 0 and i % 100 == 0:
+        if rank == 0 and i % 10 == 0:
             print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
     if rank == 0:  # if main process
