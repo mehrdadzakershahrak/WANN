@@ -53,7 +53,7 @@ class ObsWrapper(gym.ObservationWrapper):
         self.wVec, self.aVec, _ = wnet.importNet(champion_artifacts_path)
 
     def observation(self, obs):
-        if config.SHOULD_USE_WANN:
+        if config.USE_WANN:
             obs = wnet.act(self.wVec, self.aVec,
                            nInput=obs.shape[0],
                            nOutput=obs.shape[0],

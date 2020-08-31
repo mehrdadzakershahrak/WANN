@@ -12,7 +12,7 @@ import config
 # TODO: add generated date timestamp for unique experiment id cycled by x experiments
 # EXPERIMENT_ID = 'wann-bipedalwalker2-v3'
 ENV_NAME = 'BipedalWalker-v3'
-WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}wann{os.sep}'
+WANN_OUT_PREFIX = f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}wann{os.sep}'
 
 
 def get_task_config():

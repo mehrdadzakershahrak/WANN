@@ -1,4 +1,4 @@
-from task import cartpole
+from task import cartpole, bipedal_walker
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
 from stable_baselines.common import make_vec_env
@@ -24,6 +24,7 @@ import pickle
 tf.get_logger().setLevel('FATAL')
 
 comm = MPI.COMM_WORLD
+rank = 0
 
 SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
@@ -41,8 +42,9 @@ def run(config):
     RUN_CHECKPOINT_FN = 'run-checkpoint.pkl'
 
     NUM_WORKERS = config['NUM_WORKERS']
+    WANN_ENV_ID = config['WANN_ENV_ID']
 
-    paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX]
+    paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX, RUN_CHECKPOINT]
     for p in paths:
         if not os.path.isdir(p):
             os.makedirs(p)
@@ -56,7 +58,7 @@ def run(config):
 
     wtrain.init_games_config(games)
     gym.envs.register(
-        id=config['WANN_ENV_ID'],
+        id=WANN_ENV_ID,
         entry_point=config['ENTRY_POINT'],
         max_episode_steps=GAME_CONFIG.max_episode_length
     )
@@ -70,7 +72,7 @@ def run(config):
     )
 
     if run_config.USE_PREV_EXPERIMENT:
-        m = PPO2.load(config['PREV_EXPERIMENT_PATH'])
+        m = PPO2.load(run_config.PREV_EXPERIMENT_PATH)
     else:
         if GAME_CONFIG.alg == task.ALG.PPO:
             env = make_vec_env(ENV_NAME, n_envs=mp.cpu_count())
@@ -88,87 +90,92 @@ def run(config):
         else:
             raise Exception(f'Algorithm configured is not currently supported')
 
-    if not run_config.START_FROM_LAST_RUN:
-        # Take one step first without WANN to ensure primary algorithm model artifacts are stored
-        m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
-        m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+    if not run_config.USE_PREV_EXPERIMENT:
+        if not run_config.START_FROM_LAST_RUN:
+            # Take one step first without WANN to ensure primary algorithm model artifacts are stored
+            m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
+            m.save(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
 
-    # Use MPI if parallel
-    if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
+        # Use MPI if parallel
+        if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
 
-    if run_config.START_FROM_LAST_RUN:
-        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rb') as f:
-            run_track = pickle.load(f)
-    else:
-        run_track = dict(
-            wann_step=True,
-            alg_step=False,
-            total_steps=0
-        )
+        if run_config.START_FROM_LAST_RUN:
+            with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rb') as f:
+                run_track = pickle.load(f)
+        else:
+            run_track = dict(
+                wann_step=True,
+                alg_step=False,
+                total_steps=0
+            )
 
-    total_steps = run_track['total_steps']
-    for i in range(1, run_config.NUM_TRAIN_STEPS+1):
-        total_steps += 1
+        total_steps = run_track['total_steps']
+        for i in range(1, run_config.NUM_TRAIN_STEPS+1):
+            total_steps += 1
 
-        if rank == 0 and i % LOG_INTERVAL == 0:
-            print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
-        agent_params = m.get_parameters()
-        agent_params = dict((key, value) for key, value in agent_params.items())
-        wann_args['agent_params'] = agent_params
-        wann_args['agent_env'] = m.get_env()
-        wann_args['rank'] = rank
-        wann_args['nWorker'] = nWorker
+            if rank == 0 and i % LOG_INTERVAL == 0:
+                print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
+            agent_params = m.get_parameters()
+            agent_params = dict((key, value) for key, value in agent_params.items())
+            wann_args['agent_params'] = agent_params
+            wann_args['agent_env'] = m.get_env()
+            wann_args['rank'] = rank
+            wann_args['nWorker'] = nWorker
 
-        if run_config.TRAIN_WANN:
-            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
-                       run_train=run_track['wann_step'])
+            if run_config.TRAIN_WANN:
+                wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
+                           run_train=run_track['wann_step'])
 
-        run_track = dict(
-            wann_step=False,
-            alg_step=True,
-            total_steps=total_steps
-        )
-        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
-            pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-        if rank == 0:  # if main process
-            # TODO: add callback for visualize WANN interval as well as
-            # gif sampling at different stages
-            if run_config.VISUALIZE_WANN:
-                champion_path = f'{WANN_OUT_PREFIX}_best.out'
-                wVec, aVec, _ = wnet.importNet(champion_path)
-
-                wann_vis.viewInd(champion_path, GAME_CONFIG)
-                plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
-
-            if run_track['alg_step']:
-                agent_config = config['AGENT']
-                m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
-                        reset_num_timesteps=True, tb_log_name='primary-model')
-                m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
-
+            if not run_config.USE_PREV_EXPERIMENT:
                 run_track = dict(
-                    wann_step=True,
-                    alg_step=False,
+                    wann_step=False,
+                    alg_step=True,
                     total_steps=total_steps
                 )
                 with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
                     pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-                # only one iteration when WANN isn't used
-                if not run_config.USE_WANN:
-                    break
-        else:
-            break  # break if subprocess
+            if rank == 0:  # if main process
+                # TODO: add callback for visualize WANN interval as well as
+                # gif sampling at different stages
+                if run_config.VISUALIZE_WANN:
+                    champion_path = f'{WANN_OUT_PREFIX}_best.out'
+                    wVec, aVec, _ = wnet.importNet(champion_path)
 
-        if rank == 0 and i % 10 == 0:
-            print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
+                    wann_vis.viewInd(champion_path, GAME_CONFIG)
+                    plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
+
+                if run_track['alg_step']:
+                    agent_config = config['AGENT']
+                    m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
+                            reset_num_timesteps=True, tb_log_name='primary-model')
+                    m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+
+                    if not run_config.USE_PREV_EXPERIMENT:
+                        run_track = dict(
+                            wann_step=True,
+                            alg_step=False,
+                            total_steps=total_steps
+                        )
+                        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
+                            pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+                    # only one iteration when WANN isn't used
+                    if not run_config.USE_WANN:
+                        break
+            else:
+                break  # break if subprocess
+
+            if rank == 0 and i % 10 == 0:
+                print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
     if rank == 0:  # if main process
         if run_config.RENDER_TEST_GIFS:
             vid_len = config['VIDEO_LENGTH']
-            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
-            render_agent(m, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
+
+            ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+            render_agent(m, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
+            render_agent(m, ENV_ID, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
     clean_up_dir(TB_LOG_PATH)
     wtrain.run({}, kill_slaves=True)
@@ -236,7 +243,7 @@ def main():
     if run_config.TASK in ['cartpole-balance']:
         run(cartpole.get_task_config())
     if run_config.TASK in ['bipedal-walker']:
-        run(cartpole.get_task_config())
+        run(bipedal_walker.get_task_config())
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 

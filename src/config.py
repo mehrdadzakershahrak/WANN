@@ -1,16 +1,40 @@
 import os
 
+VERSION_NUM = 1
+
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
 ############################################
-TASK = '{ENTER TEST HERE}'
-EXPERIMENT_ID = '{ENTER EXPERIMENT ID HERE}'
+TASK = 'bipedal-walker'
+EXPERIMENT_ID = f'wann-bipedalwalker-v3-{VERSION_NUM}'
+PREV_EXPERIMENT_PATH = f'result{os.sep}artifact{os.sep}{EXPERIMENT_ID}{os.sep}primary-model.zip'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 START_FROM_LAST_RUN = False
-TRAIN_WANN = False
-USE_WANN = False
+TRAIN_WANN = True
+USE_WANN = True # TODO: fix this
 VISUALIZE_WANN = False
-RENDER_TEST_GIFS = False
-NUM_TRAIN_STEPS = 30
+RENDER_TEST_GIFS = True
+NUM_TRAIN_STEPS = 1000
 ############################################
+
+
+# config.TASK = 'bipedal-walker'
+# config.EXPERIMENT_ID = f'wann-bipedalwalker-v3-{VERSION_NUM}'
+# config.SEED = 0  # high level seed for all experiments
+# config.TRAIN_WANN = False
+# config.USE_WANN = True
+# config.USE_PREV_EXPERIMENT = True
+# config.PREV_EXPERIMENT_PATH = f'result{os.sep}artifact{os.sep}wann-bipedalwalker-v3-1{os.sep}primary-model.zip'
+# config.RENDER_TEST_GIFS = True
+# config.NUM_TRAIN_STEPS = 1000
+# main()
+#
+# config.TASK = 'bipedal-walker'
+# config.EXPERIMENT_ID = f'no-wann-bipedalwalker-v3-{VERSION_NUM}'
+# config.SEED = 0  # high level seed for all experiments
+# config.TRAIN_WANN = False
+# config.USE_WANN = False
+# config.RENDER_TEST_GIFS = True
+# config.NUM_TRAIN_STEPS = 1000
+# main()
