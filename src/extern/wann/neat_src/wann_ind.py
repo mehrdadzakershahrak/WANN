@@ -2,7 +2,7 @@ import numpy as np
 import copy
 from .ind import *
 from .ann import getLayer, getNodeOrder
-from utils import listXor
+from extern.wann.utils import listXor
 
 
 class WannInd(Ind):
@@ -142,7 +142,7 @@ class WannInd(Ind):
       if start != end:
         mutNode = np.random.randint(start,end)
         newActPool = listXor([int(nodeG[2,mutNode])], list(p['ann_actRange']))
-        nodeG[2,mutNode] = int(newActPool[np.random.randint(len(newActPool))])
+        nodeG[2,mutNode] = int(newActPool[np.random.randint(len(newActPool))-1])
 
     child = WannInd(connG, nodeG)
     child.birth = gen

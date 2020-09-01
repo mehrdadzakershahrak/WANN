@@ -1,23 +1,26 @@
-import os
-import sys
-import time
-import math
-import argparse
-import subprocess
 import numpy as np
-np.set_printoptions(precision=2, linewidth=160) 
+import tensorflow as tf
+import os
+import pickle
+tf.get_logger().setLevel('ERROR')
 
 # MPI
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
 
 # prettyNeat
-from neat_src import * # NEAT and WANNs
-from domain import *   # Task environments
+from extern.wann.neat_src import * # NEAT and WANNs
+from extern.wann.domain import *   # Task environments
 
-import multiprocessing as mp
+games = None
 
+_ALG_CHECKPOINT_PATH=f'_checkpoint{os.sep}'
+_ALG_CHECKPOINT_FN = f'alg-checkpoint.pkl'
+
+def init_games_config(g):
+  global games
+
+  games = g
 
 # -- Run NEAT ------------------------------------------------------------ -- #
 def master(): 
@@ -25,7 +28,15 @@ def master():
   """
   global fileName, hyp
   data = WannDataGatherer(fileName, hyp)
-  alg  = Wann(hyp)
+
+  if not os.path.exists(fileName+_ALG_CHECKPOINT_PATH):
+    os.makedirs(fileName+_ALG_CHECKPOINT_PATH)
+
+  if hyp['use_checkpoint']:
+    with open(fileName+_ALG_CHECKPOINT_PATH+_ALG_CHECKPOINT_FN, 'rb') as f:
+      alg = pickle.load(f)
+  else:
+    alg = Wann(hyp)
 
   for gen in range(hyp['maxGen']):        
     pop = alg.ask()            # Get newly evolved individuals from NEAT  
@@ -35,11 +46,15 @@ def master():
     data = gatherData(data,alg,gen,hyp)
     print(gen, '\t', data.display())
 
+    # checkpoint generation
+    with open(fileName + _ALG_CHECKPOINT_PATH + _ALG_CHECKPOINT_FN, 'wb') as f:
+      pickle.dump(alg, f, protocol=pickle.HIGHEST_PROTOCOL)
+
   # Clean up and data gathering at run end
   data = gatherData(data,alg,gen,hyp,savePop=True)
   data.save()
   data.savePop(alg.pop,fileName) # Save population as 2D numpy arrays
-  stopAllWorkers()
+
 
 def gatherData(data,alg,gen,hyp,savePop=False):
   """Collects run data, saves it to disk, and exports pickled population
@@ -63,9 +78,9 @@ def gatherData(data,alg,gen,hyp,savePop=False):
 
   if savePop is True: # Get a sample pop to play with in notebooks    
     global fileName
-    pref = 'log/' + fileName
+
     import pickle
-    with open(pref+'_pop.obj', 'wb') as fp:
+    with open(fileName+'_pop.obj', 'wb') as fp:
       pickle.dump(alg.pop,fp)
 
   return data
@@ -180,11 +195,11 @@ def slave():
   PseudoReturn (sent to master):
     result - (float)    - fitness value of network
   """
-  global hyp  
-  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'])
-
-  # Evaluate any weight vectors sent this way
+  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
+                     agent_env=agent_env)
   while True:
+    # Evaluate any weight vectors sent this way
+    # while True:
     n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
     if n_wVec > 0:
       wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
@@ -198,9 +213,8 @@ def slave():
       result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
       comm.Send(result, dest=0)            # send it back
 
-    if n_wVec < 0: # End signal recieved
-      print('Worker # ', rank, ' shutting down.')
-      break
+      if n_wVec < 0: # End signal recieved
+        break
 
 def stopAllWorkers():
   """Sends signal to all workers to shutdown.
@@ -211,71 +225,39 @@ def stopAllWorkers():
   for iWork in range(nSlave):
     comm.send(-1, dest=(iWork)+1, tag=1)
 
-def mpi_fork(n):
-  """Re-launches the current script with workers
-  Returns "parent" for original parent, "child" for MPI children
-  (from https://github.com/garymcintire/mpi_util/)
-  """
-  if n<=1:
-    return "child"
-  if os.getenv("IN_MPI") is None:
-    env = os.environ.copy()
-    env.update(
-      MKL_NUM_THREADS="1",
-      OMP_NUM_THREADS="1",
-      IN_MPI="1"
-    )
-    print( ["mpirun", "-np", str(n), sys.executable] + sys.argv)
-    subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
-    return "parent"
-  else:
-    global nWorker, rank
-    nWorker = comm.Get_size()
-    rank = comm.Get_rank()
-    #print('assigning the rank and nworkers', nWorker, rank)
-    return "child"
-
-
 # -- Input Parsing ------------------------------------------------------- -- #
 
-def main(argv):
-  """Handles command line input, launches optimization or evaluation script
-  depending on MPI rank.
-  """
-  global fileName, hyp # Used by both master and slave processes
-  fileName    = args.outPrefix
-  hyp_default = args.default
-  hyp_adjust  = args.hyperparam
 
-  hyp = loadHyp(pFileName=hyp_default)
-  updateHyp(hyp,hyp_adjust)
+def run(args, kill_slaves=False, use_checkpoint=False, run_train=True):
+  if kill_slaves:
+    stopAllWorkers()
+    return
 
-  # Launch main thread and workers
+  global fileName, hyp, agent_params, agent_env, rank, nWorker # Used by both master and slave processes
+  fileName    = args['outPrefix']
+  hyp  = args['hyperparam']
+
+  # TODO: clean this up HACK
+  hyp['agent_params'] = args['agent_params']
+  hyp['agent_env'] = args['agent_env']
+  hyp['use_checkpoint'] = use_checkpoint
+
+  agent_params = args['agent_params']
+  agent_env = args['agent_env']
+  rank = args['rank']
+  nWorker = args['nWorker']
+
+  updateHyp(hyp, games)
+
   if (rank == 0):
-    master()
+    if run_train:
+      print('PERFORMING WANN TRAINING STEP...')
+      master()
+      print('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
     slave()
+    exit(0)
+
 
 if __name__ == "__main__":
-  ''' Parse input and launch '''
-  parser = argparse.ArgumentParser(description=('Evolve WANNs'))
-  
-  parser.add_argument('-d', '--default', type=str,\
-   help='default hyperparameter file', default='p/default_wann.json')
-
-  parser.add_argument('-p', '--hyperparam', type=str,\
-   help='hyperparameter file', default='p/laptop_swing.json')
-
-  parser.add_argument('-o', '--outPrefix', type=str,\
-   help='file name for result output', default='test')
-  
-  parser.add_argument('-n', '--num_worker', type=int,\
-   help='number of cores to use', default=mp.cpu_count())
-
-  args = parser.parse_args()
-
-
-  # Use MPI if parallel
-  if "parent" == mpi_fork(args.num_worker+1): os._exit(0)
-
-  main(args)                              
+  run()

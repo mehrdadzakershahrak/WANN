@@ -11,10 +11,10 @@ import sys
 np.set_printoptions(precision=2) 
 np.set_printoptions(linewidth=160)
 
-from neat_src import * # NEAT and WANNs
-from domain import *   # Task environments
+from extern.wann.neat_src import * # NEAT and WANNs
+from extern.wann.domain import *   # Task environments
 
-def main(argv):
+def run(args):
   infile  = args.infile
   outPref = args.outPref
   hyp_default = args.default
@@ -83,5 +83,4 @@ if __name__ == "__main__":
    help='random seed', default=-1)
 
   args = parser.parse_args()
-  main(args)                             
-  
+  run(args)

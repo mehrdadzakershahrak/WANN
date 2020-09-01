@@ -104,7 +104,7 @@ class NeatDataGatherer():
     """
     ''' Save data to disk '''
     filename = self.filename
-    pref = 'log/' + filename
+    pref = filename
 
     # --- Generation fit/complexity stats ------------------------------------ 
     gStatLabel = ['x_scale',\
@@ -124,7 +124,7 @@ class NeatDataGatherer():
     exportNet(pref + '_best.out',wMat,aVec)
     
     if gen > 1:
-      folder = 'log/' + filename + '_best/'
+      folder = filename + '_best/'
       if not os.path.exists(folder):
         os.makedirs(folder)
       exportNet(folder + str(gen).zfill(4) +'.out',wMat,aVec)
@@ -145,7 +145,7 @@ class NeatDataGatherer():
   def savePop(self,pop,filename):
     """Save all individuals in population as numpy arrays
     """
-    folder = 'log/' + filename + '_pop/'
+    folder = filename + '_pop/'
     if not os.path.exists(folder):
       os.makedirs(folder)
 

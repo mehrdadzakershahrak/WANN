@@ -2,9 +2,16 @@
 .idea/
 
 # APP
-../../.pyc
+*.pyc
+__pycache_
+src/log/**
+
+result
 
 .DS_STORE
 src/.DS_STORE
 
 src/**/**.DS_STORE
+
+extern/wann/log
+src/extern/wann/log

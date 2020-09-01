@@ -1,7 +1,7 @@
 gym[atari]
-gym
+gym==0.17.2
 pandas
-numpy==1.16.1
+numpy==1.17.0
 matplotlib
 sns
 Pillow
@@ -9,7 +9,14 @@ scikit-learn
 pyarrow
 scipy
 opencv-contrib-python
-tensorflow-gpu==1.14
+tensorflow-gpu==1.15
 mpi4py==3.0.3
-baselines==0.1.5
-tensorboard
+seaborn
+networkx
+cloudpickle==1.2.0
+stable-baselines==2.10.1
+stable-baselines[mpi]
+gym-retro
+procgen
+Box2D==2.3.10
+tensorboard==1.15.0

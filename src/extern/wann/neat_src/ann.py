@@ -252,8 +252,10 @@ def selectAct(action, actSelect):
   """  
   if actSelect == 'softmax':
     action = softmax(action)
+  elif actSelect == 'argmax':
+    action = np.argmax(action)
   elif actSelect == 'prob':
-    action = weightedRandom(np.sum(action,axis=0))
+    action = weightedRandom(np.sum(action, axis=0))
   else:
     action = action.flatten()
   return action
@@ -313,4 +315,3 @@ def importNet(fileName):
   wKey = np.where(wVec!=0)[0] 
 
   return wVec, aVec, wKey
-

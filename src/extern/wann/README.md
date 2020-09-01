@@ -1,7 +1,7 @@
 # Weight Agnostic Neural Networks
 
 Weight Agnostic Networks: network topologies evolved to work with a variety of shared weights. Adapted from the [prettyNEAT](../../../../../reference/brain-tokyo-workshop/WANNRelease/prettyNEAT) package. If you are just interested in seeing more details of how WANNs were implemented the [WANN](../../../../../reference/brain-tokyo-workshop/WANNRelease/WANN) repo is a cleaner self-contained version. This fork contains and adapts code used in the original NEAT (species, crossover, etc.) -- so if you are looking to extend or play around with WANNs you are in the right place.
-
+conda install -c conda-forge pypy3.6
 
 ## Dependencies
 

@@ -3,8 +3,8 @@ import math
 import copy
 import json
 
-from domain import *  # Task environments
-from utils import *
+from extern.wann.domain import *  # Task environments
+from extern.wann.utils import *
 from .nsga_sort import nsga_sort
 from .neat import Neat
 
