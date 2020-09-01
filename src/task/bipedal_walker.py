@@ -10,7 +10,7 @@ import config
 # TODO: simplify this further
 
 # TODO: add generated date timestamp for unique experiment id cycled by x experiments
-# EXPERIMENT_ID = 'wann-bipedalwalker2-v3'
+# EXPERIMENT_ID = 'wann-bipedalwalker2-v2'
 ENV_NAME = 'BipedalWalker-v3'
 WANN_OUT_PREFIX = f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}wann{os.sep}'
 
@@ -21,8 +21,8 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 5
-    wann_param_config['popSize'] = 192
+    wann_param_config['maxGen'] = 10
+    wann_param_config['popSize'] = 1024
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
@@ -39,7 +39,7 @@ def get_task_config():
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=300,
+                  max_episode_length=400,
                   alg=task.ALG.PPO,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
@@ -51,8 +51,8 @@ def get_task_config():
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
             verbose=1,
-            log_interval=1,
-            total_timesteps=1000
+            log_interval=100, # must be same as total_timesteps until baselines plotting bug is fixed
+            total_timesteps=10000
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,

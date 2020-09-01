@@ -1,6 +1,6 @@
 import os
 
-VERSION_NUM = 2
+VERSION_NUM = 4
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
@@ -11,7 +11,7 @@ PREV_EXPERIMENT_PATH = f'result{os.sep}artifact{os.sep}{EXPERIMENT_ID}{os.sep}pr
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 START_FROM_LAST_RUN = False
-TRAIN_WANN = False
+TRAIN_WANN = True
 USE_WANN = True
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = True

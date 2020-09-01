@@ -134,7 +134,10 @@ def run(config):
                 if i == 1:
                     if GAME_CONFIG.alg == task.ALG.PPO:
                         ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-                        env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
+
+                        # TODO: re-add vec env
+                        # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
+                        env = gym.make(ENV_ID)
 
                         if run_config.START_FROM_LAST_RUN:
                             m = PPO2.load(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)

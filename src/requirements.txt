@@ -1,5 +1,5 @@
 gym[atari]
-gym
+gym==0.17.2
 pandas
 numpy==1.17.0
 matplotlib
@@ -14,7 +14,7 @@ mpi4py==3.0.3
 seaborn
 networkx
 cloudpickle==1.2.0
-stable-baselines==2.10.0
+stable-baselines==2.10.1
 stable-baselines[mpi]
 gym-retro
 procgen
