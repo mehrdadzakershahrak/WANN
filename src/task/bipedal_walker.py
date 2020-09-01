@@ -51,7 +51,7 @@ def get_task_config():
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
             verbose=1,
-            log_interval=5,
+            log_interval=1,
             total_timesteps=1000
         ),
         ENTRY_POINT='task.bipedal_walker:_env',

@@ -82,7 +82,8 @@ def run(config):
             m.save(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
 
         # Use MPI if parallel
-        if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
+        if run_config.TRAIN_WANN:
+            if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
 
         if run_config.START_FROM_LAST_RUN:
             with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rb') as f:
@@ -100,14 +101,14 @@ def run(config):
 
             if rank == 0 and i % LOG_INTERVAL == 0:
                 print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
-            agent_params = m.get_parameters()
-            agent_params = dict((key, value) for key, value in agent_params.items())
-            wann_args['agent_params'] = agent_params
-            wann_args['agent_env'] = m.get_env()
-            wann_args['rank'] = rank
-            wann_args['nWorker'] = nWorker
 
             if run_config.TRAIN_WANN:
+                agent_params = m.get_parameters()
+                agent_params = dict((key, value) for key, value in agent_params.items())
+                wann_args['agent_params'] = agent_params
+                wann_args['agent_env'] = m.get_env()
+                wann_args['rank'] = rank
+                wann_args['nWorker'] = nWorker
                 wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
                            run_train=run_track['wann_step'])
 
@@ -150,9 +151,11 @@ def run(config):
 
                 if run_track['alg_step']:
                     agent_config = config['AGENT']
-                    m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=agent_config['log_interval'],
+                    print('TRAINING ALG STEP...')
+                    m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=1,
                             reset_num_timesteps=True, tb_log_name='primary-model')
                     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+                    print('TRAINING ALG STEP COMPLETE')
 
                     if not run_config.USE_PREV_EXPERIMENT:
                         run_track = dict(
