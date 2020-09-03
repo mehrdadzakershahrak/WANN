@@ -1,12 +1,12 @@
 import os
 
-VERSION_NUM = 4
+VERSION_NUM = 2
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
 ############################################
 TASK = 'bipedal-walker'
-EXPERIMENT_ID = f'wann-bipedalwalker-v3-{VERSION_NUM}'
+EXPERIMENT_ID = f'no-wann-scratch-retrain-bipedalwalker-v3-{VERSION_NUM}'
 PREV_EXPERIMENT_PATH = f'result{os.sep}artifact{os.sep}{EXPERIMENT_ID}{os.sep}primary-model.zip'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
@@ -15,7 +15,7 @@ TRAIN_WANN = True
 USE_WANN = True
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = True
-NUM_TRAIN_STEPS = 1000
+NUM_TRAIN_STEPS = 10000
 ############################################
 
 

@@ -186,14 +186,7 @@ def run(config):
             render_agent(m, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
             render_agent(m, ENV_ID, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
-    clean_up_dir(TB_LOG_PATH)
     wtrain.run({}, kill_slaves=True)
-
-
-def clean_up_dir(path, del_prefix='__'):
-    files = [fn for fn in listdir(path) if isfile(join(path, fn)) if del_prefix in fn]
-    for fn in files:
-        os.remove(join(path, fn))
 
 
 def mpi_fork(n):
