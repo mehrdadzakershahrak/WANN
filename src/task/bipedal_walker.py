@@ -41,7 +41,7 @@ def get_task_config():
                   noise_bias=0.0,
                   output_noise=[False, False, False],
                   max_episode_length=400,
-                  alg=task.ALG.PPO,
+                  alg=task.ALG.DDPG,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
                   'hull_angle','hull_vel_angle','vel_x','vel_y',
@@ -52,8 +52,8 @@ def get_task_config():
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
             verbose=1,
-            log_interval=100, # must be same as total_timesteps until baselines plotting bug is fixed
-            total_timesteps=1200
+            log_interval=1000, # must be same as total_timesteps until baselines plotting bug is fixed
+            total_timesteps=20000000
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,

@@ -3,9 +3,10 @@ import numpy as np
 import sys
 from extern.wann.domain.make_env import make_env
 from extern.wann.neat_src import *
-from stable_baselines import PPO2
+from stable_baselines import PPO2, DDPG
 from task import task
 from stable_baselines.common.policies import MlpPolicy
+from stable_baselines.common.noise import NormalActionNoise, AdaptiveParamNoiseSpec, OrnsteinUhlenbeckActionNoise
 from silence_tensorflow import silence_tensorflow
 silence_tensorflow()
 import tensorflow as tf
@@ -53,7 +54,11 @@ class GymTask():
 
       self.agent = agent
     elif self.alg == task.ALG.DDPG:
-      pass
+      n_actions = agent_env.action_space.shape[-1]
+      action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
+                                                  sigma=float(0.5) * np.ones(n_actions))
+      agent = DDPG(MlpPolicy, agent_env, verbose=0, param_noise=None, action_noise=action_noise)
+      agent.load_parameters(agent_params)
     elif self.alg == task.ALG.TD3:
       pass
     else:

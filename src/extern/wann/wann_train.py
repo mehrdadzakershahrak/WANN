@@ -32,13 +32,11 @@ def master():
   if not os.path.exists(fileName+_ALG_CHECKPOINT_PATH):
     os.makedirs(fileName+_ALG_CHECKPOINT_PATH)
 
-  # if hyp['use_checkpoint']:
-  #   with open(fileName+_ALG_CHECKPOINT_PATH+_ALG_CHECKPOINT_FN, 'rb') as f:
-  #     alg = pickle.load(f)
-  # else:
-  #   alg = Wann(hyp)
-
-  alg = Wann(hyp)
+  if hyp['use_checkpoint']:
+    with open(fileName+_ALG_CHECKPOINT_PATH+_ALG_CHECKPOINT_FN, 'rb') as f:
+      alg = pickle.load(f)
+  else:
+    alg = Wann(hyp)
 
   for gen in range(hyp['maxGen']):        
     pop = alg.ask()            # Get newly evolved individuals from NEAT  
@@ -49,8 +47,8 @@ def master():
     print(gen, '\t', data.display())
 
     # checkpoint generation
-    # with open(fileName + _ALG_CHECKPOINT_PATH + _ALG_CHECKPOINT_FN, 'wb') as f:
-    #   pickle.dump(alg, f, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(fileName + _ALG_CHECKPOINT_PATH + _ALG_CHECKPOINT_FN, 'wb') as f:
+      pickle.dump(alg, f, protocol=pickle.HIGHEST_PROTOCOL)
 
   # Clean up and data gathering at run end
   data = gatherData(data,alg,gen,hyp,savePop=True)

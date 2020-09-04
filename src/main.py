@@ -2,7 +2,7 @@ from task import cartpole, bipedal_walker
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
 from stable_baselines.common import make_vec_env
-from stable_baselines import PPO2
+from stable_baselines import PPO2, DDPG
 from stable_baselines.common.policies import MlpPolicy
 import gym
 import os
@@ -20,6 +20,7 @@ import tensorflow as tf
 from os.path import isfile, join
 from os import listdir
 import pickle
+from stable_baselines.common.noise import NormalActionNoise, AdaptiveParamNoiseSpec, OrnsteinUhlenbeckActionNoise
 
 tf.get_logger().setLevel('FATAL')
 
@@ -72,12 +73,27 @@ def run(config):
     )
 
     if run_config.USE_PREV_EXPERIMENT:
-        m = PPO2.load(run_config.PREV_EXPERIMENT_PATH)
+        if GAME_CONFIG.alg == task.ALG.PPO:
+            m = PPO2.load(run_config.PREV_EXPERIMENT_PATH)
+        elif GAME_CONFIG.alg == task.ALG.DDPG:
+            m = DDPG.load(run_config.PREV_EXPERIMENT_PATH)
+        else:
+            raise('Algorithm chosen is not supported.')
     else:
         if not run_config.START_FROM_LAST_RUN:
             # Take one step first without WANN to ensure primary algorithm model artifacts are stored
             onestep_env = make_vec_env(ENV_NAME, n_envs=1)
-            m = PPO2(MlpPolicy, onestep_env, verbose=0)
+
+            if GAME_CONFIG.alg == task.ALG.PPO:
+                m = PPO2(MlpPolicy, onestep_env, verbose=0)
+            elif GAME_CONFIG.alg == task.ALG.DDPG:
+                n_actions = onestep_env.action_space.shape[-1]
+                action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
+                                                            sigma=float(0.5) * np.ones(n_actions))
+                m = DDPG(MlpPolicy, onestep_env, verbose=0, param_noise=None, action_noise=action_noise)
+            else:
+                raise ('Algorithm chosen is not supported.')
+
             m.learn(total_timesteps=1, reset_num_timesteps=False, tb_log_name='__primary-model')
             m.save(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
 
@@ -146,7 +162,14 @@ def run(config):
                             m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
                                      full_tensorboard_log=True)
                     elif GAME_CONFIG.alg == task.ALG.DDPG:
-                        pass
+                        if run_config.START_FROM_LAST_RUN:
+                            m = DDPG.load(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
+                        else:
+                            n_actions = env.action_space.shape[-1]
+                            action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
+                                                                        sigma=float(0.5)*np.ones(n_actions))
+                            m = DDPG(MlpPolicy, env, verbose=1, param_noise=None, action_noise=action_noise,
+                                     tensorboard_log=TB_LOG_PATH, full_tensorboard_log=True)
                     elif GAME_CONFIG.alg == task.ALG.TD3:
                         pass
                     else:
