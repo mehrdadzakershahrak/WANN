@@ -9,7 +9,7 @@ scikit-learn
 pyarrow
 scipy
 opencv-contrib-python
-tensorflow-gpu==1.15
+tensorflow-gpu==1.15.3
 mpi4py==3.0.3
 seaborn
 networkx

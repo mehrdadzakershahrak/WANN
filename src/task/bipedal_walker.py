@@ -21,14 +21,15 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 10
-    wann_param_config['popSize'] = 1024
+    wann_param_config['maxGen'] = 20
+    wann_param_config['popSize'] = 20
+    wann_param_config['alg_nReps'] = 1
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
         NUM_WORKERS=mp.cpu_count(),
         GAME_CONFIG=task.Game(env_name='BipedalWalker-v3',
-                  actionSelect='all', # all, soft, hard
+                  actionSelect='all',  # all, soft, hard
                   input_size=24,
                   output_size=24,
                   time_factor=0,
@@ -51,8 +52,16 @@ def get_task_config():
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
             verbose=1,
-            log_interval=100, # must be same as total_timesteps until baselines plotting bug is fixed
-            total_timesteps=10000
+            gamma=0.99,
+            learning_rate=0.003,
+            buffer_size=100000,
+            train_freq=1000,
+            log_interval=10, # must be same as total_timesteps until baselines plotting bug is fixed
+            total_timesteps=10000,
+            batch_size=10000,
+            learning_starts=500,
+            gradient_steps=1000,
+            n_cpu_tf_sess=None
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,
