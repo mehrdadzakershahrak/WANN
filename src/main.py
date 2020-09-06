@@ -4,9 +4,9 @@ from extern.wann.neat_src import ann as wnet
 from stable_baselines.common import make_vec_env
 from stable_baselines import PPO2, DDPG
 from stable_baselines.common.policies import MlpPolicy
+from stable_baselines.ddpg.policies import MlpPolicy as DDPG_MlpPolicy
 import gym
 import os
-import multiprocessing as mp
 import extern.wann.vis as wann_vis
 import matplotlib.pyplot as plt
 from task import task
@@ -17,10 +17,11 @@ import sys
 from mpi4py import MPI
 import subprocess
 import tensorflow as tf
-from os.path import isfile, join
-from os import listdir
 import pickle
 from stable_baselines.common.noise import NormalActionNoise, AdaptiveParamNoiseSpec, OrnsteinUhlenbeckActionNoise
+from silence_tensorflow import silence_tensorflow
+silence_tensorflow()
+import tensorflow as tf
 
 tf.get_logger().setLevel('FATAL')
 
@@ -51,6 +52,7 @@ def run(config):
             os.makedirs(p)
 
     GAME_CONFIG = config['GAME_CONFIG']
+    AGENT_CONFIG = config['AGENT']
     ENV_NAME = GAME_CONFIG.env_name
 
     games = {
@@ -89,8 +91,13 @@ def run(config):
             elif GAME_CONFIG.alg == task.ALG.DDPG:
                 n_actions = onestep_env.action_space.shape[-1]
                 action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
-                                                            sigma=float(0.5) * np.ones(n_actions))
-                m = DDPG(MlpPolicy, onestep_env, verbose=0, param_noise=None, action_noise=action_noise)
+                                                            sigma=float(0.5)*np.ones(n_actions))
+                m = DDPG(DDPG_MlpPolicy, onestep_env,
+                         gamma=AGENT_CONFIG['gamma'],
+                         verbose=0,
+                         batch_size=AGENT_CONFIG['batch_size'],
+                         buffer_size=AGENT_CONFIG['buffer_size'],
+                         param_noise=None, action_noise=action_noise)
             else:
                 raise ('Algorithm chosen is not supported.')
 
@@ -148,27 +155,30 @@ def run(config):
                     plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
 
                 if i == 1:
+                    # TODO: re-add vec env
+                    # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
+                    ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+                    env = make_vec_env(ENV_ID, n_envs=NUM_WORKERS)
+
                     if GAME_CONFIG.alg == task.ALG.PPO:
-                        ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-
-                        # TODO: re-add vec env
-                        # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
-                        env = gym.make(ENV_ID)
-
                         if run_config.START_FROM_LAST_RUN:
                             m = PPO2.load(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
                         else:
                             # TODO: configuration for hyperparameters
-                            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH,
-                                     full_tensorboard_log=True)
+                            m = PPO2(MlpPolicy, env, verbose=1, tensorboard_log=TB_LOG_PATH)
                     elif GAME_CONFIG.alg == task.ALG.DDPG:
                         if run_config.START_FROM_LAST_RUN:
-                            m = DDPG.load(ARTIFACTS_PATH + task.MODEL_ARTIFACT_FILENAME)
+                            m = DDPG.load(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
                         else:
                             n_actions = env.action_space.shape[-1]
                             action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
                                                                         sigma=float(0.5)*np.ones(n_actions))
-                            m = DDPG(MlpPolicy, env, verbose=1, param_noise=None, action_noise=action_noise,
+                            m = DDPG(DDPG_MlpPolicy, onestep_env,
+                                     gamma=AGENT_CONFIG['gamma'],
+                                     verbose=0,
+                                     batch_size=AGENT_CONFIG['batch_size'],
+                                     buffer_size=AGENT_CONFIG['buffer_size'],
+                                     param_noise=None, action_noise=action_noise,
                                      tensorboard_log=TB_LOG_PATH, full_tensorboard_log=True)
                     elif GAME_CONFIG.alg == task.ALG.TD3:
                         pass
@@ -176,9 +186,9 @@ def run(config):
                         raise Exception(f'Algorithm configured is not currently supported')
 
                 if run_track['alg_step']:
-                    agent_config = config['AGENT']
                     print('TRAINING ALG STEP...')
-                    m.learn(total_timesteps=agent_config['total_timesteps'], log_interval=1,
+                    print(AGENT_CONFIG['total_timesteps'])
+                    m.learn(total_timesteps=AGENT_CONFIG['total_timesteps'], log_interval=AGENT_CONFIG['log_interval'],
                             reset_num_timesteps=True, tb_log_name='primary-model')
                     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
                     print('TRAINING ALG STEP COMPLETE')
@@ -191,10 +201,6 @@ def run(config):
                         )
                         with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
                             pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-                    # only one iteration when WANN isn't used
-                    if not run_config.USE_WANN:
-                        break
             else:
                 break  # break if subprocess
 
