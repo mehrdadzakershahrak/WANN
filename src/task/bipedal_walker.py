@@ -21,7 +21,7 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 20
+    wann_param_config['maxGen'] = 5
     wann_param_config['popSize'] = 20
     wann_param_config['alg_nReps'] = 1
 
@@ -34,9 +34,9 @@ def get_task_config():
                   output_size=24,
                   time_factor=0,
                   layers=[40, 40],
-                  i_act=np.full(24,4),
+                  i_act=np.full(24,1),
                   h_act=[1,2,3,4,5,6,7,8,9,10],
-                  o_act=np.full(4,4),
+                  o_act=np.full(4,1),
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
@@ -57,7 +57,7 @@ def get_task_config():
             buffer_size=100000,
             train_freq=1000,
             log_interval=10, # must be same as total_timesteps until baselines plotting bug is fixed
-            total_timesteps=10000,
+            total_timesteps=10,
             batch_size=10000,
             learning_starts=500,
             gradient_steps=1000,

@@ -3,22 +3,14 @@ import numpy as np
 import sys
 from extern.wann.domain.make_env import make_env
 from extern.wann.neat_src import *
-from stable_baselines import PPO2, DDPG
+from stable_baselines3 import PPO, DDPG
 from task import task
-from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.ddpg.policies import MlpPolicy as DDPG_MlpPolicy
-from stable_baselines.common.noise import NormalActionNoise, AdaptiveParamNoiseSpec, OrnsteinUhlenbeckActionNoise
-from silence_tensorflow import silence_tensorflow
-silence_tensorflow()
-import tensorflow as tf
-tf.get_logger().setLevel('FATAL')
 
 
 class GymTask():
   """Problem domain to be solved by neural network. Uses OpenAI Gym patterns.
   """ 
-  def __init__(self, game, paramOnly=False, nReps=1,
-               agent_params=None, agent_env=None):
+  def __init__(self, game, paramOnly=False, nReps=1):
     """Initializes task environment
   
     Args:
@@ -27,9 +19,9 @@ class GymTask():
     Optional:
       paramOnly - (bool)  - only load parameters instead of launching task?
       nReps     - (nReps) - number of trials to get average fitness
-    """
 
     if agent_params is None:
+    """
       raise Exception('AGENT PARAMS IS NONE')
 
     if agent_params is None:
@@ -47,21 +39,9 @@ class GymTask():
     # HACK
 
     self.alg      = game.alg
-    if self.alg == task.ALG.PPO:
-      # TODO: make network policy config driven
+    if self.alg == task.ALG.SAC:
+      # TODO: get SAC critic here
 
-      agent = PPO2(MlpPolicy, agent_env, verbose=0) # TODO: integrate with MPI from top level for performance
-      agent.load_parameters(agent_params)
-
-      self.agent = agent
-    elif self.alg == task.ALG.DDPG:
-      n_actions = agent_env.action_space.shape[-1]
-      action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions),
-                                                  sigma=float(0.5) * np.ones(n_actions))
-      agent = DDPG(DDPG_MlpPolicy, agent_env, verbose=0, param_noise=None, action_noise=action_noise)
-      agent.load_parameters(agent_params)
-    elif self.alg == task.ALG.TD3:
-      pass
     else:
       raise Exception(f'Algorithm configured is not currently supported')
 
@@ -126,12 +106,13 @@ class GymTask():
     state = self.env.reset()
     self.env.t = 0
     annOut = act(wVec, aVec, self.nInput, self.nOutput, state)
+    action = selectAct(annOut, self.actSelect)
 
-    # TODO: add passthrough for deterministic vs stochastic output
+    # TODO: replace emulator step with critic eval from SAC here
 
-    with tf.device('/cpu:0'):
-      action, state = self.agent.predict(annOut)
-      action = np.array(action)[0]
+    # with tf.device('/cpu:0'):
+    #   action, state = self.agent.predict(annOut)
+    #   action = np.array(action)[0]
 
     # previous prediction:
     # action = selectAct(annOut,self.actSelect)
@@ -152,9 +133,11 @@ class GymTask():
       annOut = act(wVec, aVec, self.nInput, self.nOutput, state) 
       action = selectAct(annOut,self.actSelect)
 
-      with tf.device('/cpu:0'):
-        action, state = self.agent.predict(annOut)
-        action = np.array(action)[0]
+      # TODO: replace emulator step with critic eval from SAC here
+
+      # with tf.device('/cpu:0'):
+      #   action, state = self.agent.predict(annOut)
+      #   action = np.array(action)[0]
 
       state, reward, done, info = self.env.step(action)
       totalReward += reward  
@@ -165,4 +148,5 @@ class GymTask():
           self.env.render()
       if done:
         break
+
     return totalReward

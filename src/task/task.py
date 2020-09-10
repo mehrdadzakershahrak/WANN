@@ -8,9 +8,7 @@ import os
 
 
 class ALG(enum.Enum):
-    PPO = 1
-    DDPG = 2
-    TD3 = 3
+    SAC = 1
 
 
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',

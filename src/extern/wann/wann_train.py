@@ -1,8 +1,6 @@
 import numpy as np
-import tensorflow as tf
 import os
 import pickle
-tf.get_logger().setLevel('ERROR')
 
 # MPI
 from mpi4py import MPI
