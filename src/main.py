@@ -16,6 +16,8 @@ from mpi4py import MPI
 import subprocess
 import pickle
 
+from rlkit.data_management.replay_buffer import ReplayBuffer
+
 comm = MPI.COMM_WORLD
 rank = 0
 
