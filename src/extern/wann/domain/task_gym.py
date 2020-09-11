@@ -22,11 +22,6 @@ class GymTask():
 
     if agent_params is None:
     """
-      raise Exception('AGENT PARAMS IS NONE')
-
-    if agent_params is None:
-      raise Exception('AGENT ENV IS NONE')
-
     # Network properties
     self.nInput   = game.input_size
     self.nOutput  = game.output_size      
@@ -39,11 +34,6 @@ class GymTask():
     # HACK
 
     self.alg      = game.alg
-    if self.alg == task.ALG.SAC:
-      # TODO: get SAC critic here
-
-    else:
-      raise Exception(f'Algorithm configured is not currently supported')
 
     # Environment
     self.nReps = nReps
@@ -102,6 +92,8 @@ class GymTask():
       random.seed(seed)
       np.random.seed(seed)
       self.env.seed(seed)
+
+    #TODO: get latest critic
 
     state = self.env.reset()
     self.env.t = 0

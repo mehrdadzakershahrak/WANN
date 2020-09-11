@@ -9,12 +9,12 @@ import rlkit.torch.pytorch_util as torch_util
 
 
 class SAC(Agent):
-    def __init__(self, env, replay, policy_net, q_net, v_net, params):
-        super().__init__(env, replay, nets=(policy_net, q_net, v_net, params))
+    def __init__(self, env, mem, policy_net, q_net, v_net, params):
+        super().__init__(env, mem, nets=(policy_net, q_net, v_net, params))
 
         self._params = params
         self._env = env
-        self._replay = replay
+        self._mem = mem
         self._policy_net = policy_net
         self._q_net = q_net
         self._v_net = v_net
@@ -36,7 +36,7 @@ class SAC(Agent):
     def train(self, n_iters, batch_size=1024):
         # TODO: add logging/checkpointing here
         for _ in range(n_iters):
-            batch = self._replay.random_batch(batch_size)
+            batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
     def load(self):
