@@ -6,6 +6,7 @@ from rlkit.torch.sac.policies import TanhGaussianPolicy
 import numpy as np
 import torch
 import rlkit.torch.pytorch_util as torch_util
+from mem import Mem
 
 
 class SAC(Agent):
@@ -50,26 +51,27 @@ class SAC(Agent):
 
 
 def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
-    obs_dim = int(np.prod(env.observation_space.shape))
-    action_dim = int(np.prod(env.action_space.shape))
     hidden = [n_lay_nodes]*n_depth
+
+    obs_size = env.observation_space.shape[0]
+    act_size = env.action_space.shape[0]
 
     v_net = FlattenMlp(
         hidden_sizes=hidden,
-        input_size=obs_dim + action_dim,
+        input_size=obs_size+act_size,
         output_size=1,
     ).to(device=torch_util.device)
 
     q_net = FlattenMlp(
         hidden_sizes=hidden,
-        input_size=obs_dim + action_dim,
+        input_size=obs_size+act_size,
         output_size=1,
     ).to(device=torch_util.device)
 
     policy_net = TanhGaussianPolicy(
         hidden_sizes=hidden,
-        obs_dim=obs_dim,
-        action_dim=action_dim,
+        obs_dim=obs_size,
+        action_dim=act_size,
     ).to(device=torch_util.device)
 
     nets = [v_net, q_net, policy_net]
@@ -78,3 +80,7 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
             p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
 
     return (n for n in nets)
+
+
+def simple_mem(size):
+    return Mem(size)

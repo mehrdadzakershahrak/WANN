@@ -57,7 +57,7 @@ def get_task_config():
             buffer_size=100000,
             train_freq=1000,
             log_interval=10, # must be same as total_timesteps until baselines plotting bug is fixed
-            total_timesteps=10,
+            n_steps=10,
             batch_size=10000,
             learning_starts=500,
             gradient_steps=1000,

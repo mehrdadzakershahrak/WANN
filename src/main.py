@@ -67,6 +67,21 @@ def run(config):
         games=games
     )
 
+    if i == 1:
+        # TODO: re-add vec env
+        # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
+        ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+        env = make_vec_env(ENV_ID, n_envs=NUM_WORKERS)
+
+        if GAME_CONFIG.alg == task.ALG.SAC:
+            if run_config.START_FROM_LAST_RUN:
+                m = SAC().load()  # TODO: load SAC model here
+            else:
+                # TODO: create SAC model here
+                m = SAC('MlpPolicy', env, verbose=1, tensorboard_log=TB_LOG_PATH)
+        else:
+            raise Exception(f'Algorithm configured is not currently supported')
+
     if run_config.USE_PREV_EXPERIMENT:
         if GAME_CONFIG.alg == task.ALG.SAC:
             m = SAC() # TODO: init SAC here
@@ -77,88 +92,29 @@ def run(config):
         if run_config.TRAIN_WANN:
             if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
 
-        # TODO: combine this with previous run
-        if run_config.START_FROM_LAST_RUN:
-            with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'rb') as f:
-                run_track = pickle.load(f)
-        else:
-            run_track = dict(
-                wann_step=True,
-                alg_step=False,
-                total_steps=0
-            )
-
-        total_steps = run_track['total_steps']
         for i in range(1, run_config.NUM_TRAIN_STEPS+1):
             total_steps += 1
-
-            if rank == 0 and i % LOG_INTERVAL == 0:
-                print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
 
             if run_config.TRAIN_WANN:
                 # TODO: get critic and pass to wann here
                 wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
-                           run_train=run_track['wann_step'])
-
-            if not run_config.USE_PREV_EXPERIMENT:
-                # TODO: cleaner sentry here
-                run_track = dict(
-                    wann_step=False,
-                    alg_step=True,
-                    total_steps=total_steps
-                )
-                with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
-                    pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
+                           run_train=True)
 
             if rank == 0:  # if main process
-                # TODO: add callback for visualize WANN interval as well as
-                # gif sampling at different stages
-
-                # TODO: remove this into utils script
-                if run_config.VISUALIZE_WANN:
-                    champion_path = f'{WANN_OUT_PREFIX}_best.out'
-                    wVec, aVec, _ = wnet.importNet(champion_path)
-
-                    wann_vis.viewInd(champion_path, GAME_CONFIG)
-                    plt.savefig(f'{VIS_RESULTS_PATH}wann-net-graph.png')
-
-                if i == 1:
-                    # TODO: re-add vec env
-                    # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
-                    ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-                    env = make_vec_env(ENV_ID, n_envs=NUM_WORKERS)
-
-                    if GAME_CONFIG.alg == task.ALG.SAC:
-                        if run_config.START_FROM_LAST_RUN:
-                            m = SAC().load() # TODO: load SAC model here
-                        else:
-                            # TODO: create SAC model here
-                            m = SAC('MlpPolicy', env, verbose=1, tensorboard_log=TB_LOG_PATH)
-                    else:
-                        raise Exception(f'Algorithm configured is not currently supported')
+                if i % LOG_INTERVAL == 0: # TODO: DRY up
+                    print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
 
                 if run_track['alg_step']:
                     print('TRAINING ALG STEP...')
 
                     # TODO:  SAC learning / logging / checkpointing here
-
-                    m.learn(total_timesteps=AGENT_CONFIG['total_timesteps'], log_interval=AGENT_CONFIG['log_interval'],
-                            reset_num_timesteps=True, tb_log_name='primary-model')
+                    m.train(steps=AGENT_CONFIG['n_steps'], log_interval=AGENT_CONFIG['log_interval'])
                     m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
-                    print('TRAINING ALG STEP COMPLETE')
-
-                    if not run_config.USE_PREV_EXPERIMENT:
-                        run_track = dict(
-                            wann_step=True,
-                            alg_step=False,
-                            total_steps=total_steps
-                        )
-                        with open(RUN_CHECKPOINT + RUN_CHECKPOINT_FN, 'wb') as f:
-                            pickle.dump(run_track, f, protocol=pickle.HIGHEST_PROTOCOL)
+                    print('TRAINING ALG STEP COMPLETE') # TODO: add proper logging
             else:
                 break  # break if subprocess
 
-            if rank == 0 and i % 10 == 0:
+            if i % LOG_INTERVAL == 0:
                 print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
     if rank == 0:  # if main process
