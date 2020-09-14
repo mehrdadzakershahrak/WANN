@@ -21,8 +21,8 @@ def get_task_config():
 
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 5
-    wann_param_config['popSize'] = 20
+    wann_param_config['maxGen'] = 5  # TODO: 20 - 4 steps
+    wann_param_config['popSize'] = 20  # TODO: 64 - 5 steps
     wann_param_config['alg_nReps'] = 1
 
     task_config = dict(
@@ -41,7 +41,7 @@ def get_task_config():
                   noise_bias=0.0,
                   output_noise=[False, False, False],
                   max_episode_length=400,
-                  alg=task.ALG.PPO,
+                  alg=task.ALG.SAC,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
                   'hull_angle','hull_vel_angle','vel_x','vel_y',
@@ -51,17 +51,28 @@ def get_task_config():
                   'lidar_5','lidar_6','lidar_7','lidar_8','lidar_9',
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
-            verbose=1,
-            gamma=0.99,
-            learning_rate=0.003,
-            buffer_size=100000,
-            train_freq=1000,
-            log_interval=10, # must be same as total_timesteps until baselines plotting bug is fixed
-            n_steps=10,
-            batch_size=10000,
-            learning_starts=500,
-            gradient_steps=1000,
-            n_cpu_tf_sess=None
+            mem_size=int(1E6),
+            n_hidden=24,
+            n_depth=3,
+            clip_val=1,
+            alg_params=dict(
+                num_epochs=100000,
+                num_eval_steps_per_epoch=400,
+                num_trains_per_train_loop=1,
+                num_expl_steps_per_train_loop=400,
+                min_num_steps_before_training=400,
+                max_path_length=1000,
+                batch_size=256,
+            ),
+            train_params=dict(
+                discount=0.99,
+                soft_target_tau=5e-3,  # TODO: 5e-4
+                target_update_period=1,
+                policy_lr=3E-4,  # TODO: 3e-5
+                qf_lr=3E-4,  # TODO: 3e-5
+                reward_scale=1,
+                use_automatic_entropy_tuning=True,  # TODO: investigate this
+            )
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,

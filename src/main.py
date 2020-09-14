@@ -1,8 +1,6 @@
 from task import cartpole, bipedal_walker
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
-from stable_baselines3.common import make_vec_env
-from stable_baselines3 import PPO, DDPG
 import gym
 import os
 import extern.wann.vis as wann_vis
@@ -15,6 +13,7 @@ import sys
 from mpi4py import MPI
 import subprocess
 import pickle
+from agent import sac as alg
 
 from rlkit.data_management.replay_buffer import ReplayBuffer
 
@@ -67,55 +66,50 @@ def run(config):
         games=games
     )
 
-    if i == 1:
-        # TODO: re-add vec env
-        # env = make_vec_env(ENV_ID, n_envs=mp.cpu_count())
-        ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-        env = make_vec_env(ENV_ID, n_envs=NUM_WORKERS)
+    # TODO: re-add vec env
+    ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+    expl_env = gym.make(ENV_ID)
+    eval_env = gym.make(ENV_ID)
 
-        if GAME_CONFIG.alg == task.ALG.SAC:
-            if run_config.START_FROM_LAST_RUN:
-                m = SAC().load()  # TODO: load SAC model here
-            else:
-                # TODO: create SAC model here
-                m = SAC('MlpPolicy', env, verbose=1, tensorboard_log=TB_LOG_PATH)
+    alg_params = AGENT_CONFIG['alg_params']
+    if GAME_CONFIG.alg == task.ALG.SAC:
+        if run_config.USE_PREV_EXPERIMENT:
+            m = alg.load()  # TODO: load SAC model here
         else:
-            raise Exception(f'Algorithm configured is not currently supported')
+            train_params = AGENT_CONFIG['train_params']
+            q_net, v_net, policy_net = alg.vanilla_nets(expl_env, AGENT_CONFIG['n_hidden'],
+                                                        AGENT_CONFIG['n_depth'],
+                                                        clip_val=AGENT_CONFIG['clip_val'])
 
-    if run_config.USE_PREV_EXPERIMENT:
-        if GAME_CONFIG.alg == task.ALG.SAC:
-            m = SAC() # TODO: init SAC here
-        else:
-            raise('Algorithm chosen is not supported.')
+            mem = alg.simple_mem(AGENT_CONFIG['mem_size'], expl_env)
+            m = alg.SAC(eval_env, expl_env, mem, policy_net,
+                        q_net, v_net, train_params, alg_params)
     else:
-        # Use MPI if parallel
+        raise Exception(f'Algorithm configured is not currently supported')
+
+    # Use MPI if parallel
+    if run_config.TRAIN_WANN:
+        if "parent" == mpi_fork(NUM_WORKERS+1): os._exit(0)
+
+    for i in range(1, run_config.NUM_TRAIN_STEPS+1):
         if run_config.TRAIN_WANN:
-            if "parent" == mpi_fork(NUM_WORKERS +1): os._exit(0)
+            # TODO: get critic and pass to wann here
+            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
+                       run_train=True)
 
-        for i in range(1, run_config.NUM_TRAIN_STEPS+1):
-            total_steps += 1
-
-            if run_config.TRAIN_WANN:
-                # TODO: get critic and pass to wann here
-                wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
-                           run_train=True)
-
-            if rank == 0:  # if main process
-                if i % LOG_INTERVAL == 0: # TODO: DRY up
-                    print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
-
-                if run_track['alg_step']:
-                    print('TRAINING ALG STEP...')
-
-                    # TODO:  SAC learning / logging / checkpointing here
-                    m.train(steps=AGENT_CONFIG['n_steps'], log_interval=AGENT_CONFIG['log_interval'])
-                    m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
-                    print('TRAINING ALG STEP COMPLETE') # TODO: add proper logging
-            else:
-                break  # break if subprocess
-
+        if rank == 0:  # if main process
             if i % LOG_INTERVAL == 0:
-                print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
+                print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
+
+            # TODO:  SAC learning / logging / checkpointing here
+            m.learn()
+            m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+            print('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
+        else:
+            break  # break if subprocess
+
+        if i % LOG_INTERVAL == 0:
+            print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
     if rank == 0:  # if main process
         if run_config.RENDER_TEST_GIFS:
@@ -190,8 +184,4 @@ def main():
 
 
 if __name__ == '__main__':
-    import torch
-    print('test successful')
-    print(torch.cuda.is_available())
-    print(torch.cuda.device_count())
-    # main()
+    main()

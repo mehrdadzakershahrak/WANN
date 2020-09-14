@@ -1,15 +1,27 @@
-from rlkit.data_management.replay_buffer import ReplayBuffer
-import collections
-import random
+from rlkit.data_management.simple_replay_buffer import SimpleReplayBuffer
 
 
-class Mem(ReplayBuffer):
-    def __init__(self, size):
-        self._buffer = collections.deque(size)
+class Mem(SimpleReplayBuffer):
+    def __init__(self, size, env):
+        obs_size = env.observation_space.shape[0]
+        act_size = env.action_space.shape[0]
 
-    def add_sample(self, obs, act, reward, next_obs, done):
-        # TODO: add priority mechanism
-        self._buffer.appendleft((obs, act, reward, next_obs, done))
+        super().__init__(
+            max_replay_buffer_size=size,
+            observation_dim=obs_size,
+            action_dim=act_size,
+            env_info_sizes=dict()
+        )
 
-    def random_batch(self, batch_size):
-        return random.sample(self._buffer, batch_size)
+        self._buf_cap = size
+
+    def add_sample(self, observation, action, reward, next_observation, terminal,
+                   **kwargs):
+        return super().add_sample(
+            observation=observation,
+            action=action,
+            reward=reward,
+            next_observation=next_observation,
+            terminal=1 if terminal.item() else 0,
+            **kwargs
+        )
