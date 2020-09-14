@@ -56,20 +56,20 @@ def get_task_config():
             n_depth=3,
             clip_val=1,
             alg_params=dict(
-                num_epochs=100000,
+                num_epochs=2e6,
                 num_eval_steps_per_epoch=400,
-                num_trains_per_train_loop=1,
+                num_trains_per_train_loop=10,
                 num_expl_steps_per_train_loop=400,
                 min_num_steps_before_training=400,
-                max_path_length=1000,
+                max_path_length=400,
                 batch_size=256,
             ),
             train_params=dict(
                 discount=0.99,
-                soft_target_tau=5e-3,  # TODO: 5e-4
+                soft_target_tau=5e-3,  # TODO: 5e-4, tried already 5e-3
                 target_update_period=1,
-                policy_lr=3E-4,  # TODO: 3e-5
-                qf_lr=3E-4,  # TODO: 3e-5
+                policy_lr=3e-4,  # TODO: 3e-5 tried 3e-4
+                qf_lr=3e-4,  # TODO: 3e-5 tried 3e-4
                 reward_scale=1,
                 use_automatic_entropy_tuning=True,  # TODO: investigate this
             )
