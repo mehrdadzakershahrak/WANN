@@ -56,7 +56,7 @@ def get_task_config():
             n_depth=3,
             clip_val=1,
             alg_params=dict(
-                num_epochs=2e6,
+                num_epochs=int(2e6),
                 num_eval_steps_per_epoch=400,
                 num_trains_per_train_loop=10,
                 num_expl_steps_per_train_loop=400,
