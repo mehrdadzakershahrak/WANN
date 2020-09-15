@@ -58,11 +58,12 @@ def get_task_config():
             alg_params=dict(
                 num_epochs=int(1e7),
                 num_eval_steps_per_epoch=1,
-                num_trains_per_train_loop=100,
-                num_expl_steps_per_train_loop=1,
-                min_num_steps_before_training=100,
+                num_trains_per_train_loop=1,
+                num_train_loops_per_epoch=10,
+                num_expl_steps_per_train_loop=1000,
+                min_num_steps_before_training=1000,
                 max_path_length=1000,
-                batch_size=256,
+                batch_size=256
             ),
             train_params=dict(
                 discount=0.99,
@@ -71,7 +72,7 @@ def get_task_config():
                 policy_lr=1e-3,
                 qf_lr=1e-3,
                 reward_scale=1,
-                use_automatic_entropy_tuning=True
+                use_automatic_entropy_tuning=False
             )
         ),
         ENTRY_POINT='task.bipedal_walker:_env',

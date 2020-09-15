@@ -6,6 +6,7 @@ import os
 import extern.wann.vis as wann_vis
 import matplotlib.pyplot as plt
 from task import task
+from rlkit.launchers.launcher_util import setup_logger
 import imageio
 import numpy as np
 import config as run_config
@@ -38,13 +39,16 @@ def run(config):
     NUM_WORKERS = config['NUM_WORKERS']
     WANN_ENV_ID = config['WANN_ENV_ID']
 
+    GAME_CONFIG = config['GAME_CONFIG']
+    AGENT_CONFIG = config['AGENT']
+
+    setup_logger(run_config.EXPERIMENT_ID, variant=AGENT_CONFIG)
+
     paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX, RUN_CHECKPOINT]
     for p in paths:
         if not os.path.isdir(p):
             os.makedirs(p)
 
-    GAME_CONFIG = config['GAME_CONFIG']
-    AGENT_CONFIG = config['AGENT']
     ENV_NAME = GAME_CONFIG.env_name
 
     games = {
