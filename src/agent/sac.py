@@ -1,12 +1,13 @@
 from agent.agent import Agent # TODO better naming here
 import copy
 from rlkit.torch.sac.sac import SACTrainer
-from rlkit.torch.networks import ConcatMlp
+from rlkit.torch.networks import FlattenMlp
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.sac.policies import MakeDeterministic, TanhGaussianPolicy
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 import numpy as np
 import torch
+import utils
 import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
 
@@ -15,32 +16,15 @@ if torch.cuda.is_available():
 
 
 class SAC(Agent):
-    def __init__(self, eval_env, expl_env, mem, policy_net,
-                 q1_net, q2_net, target_q1_net, target_q2_net,
-                 train_params, alg_params):
-        super().__init__(eval_env, expl_env, mem, train_params, alg_params,
-                         nets=(policy_net, q1_net, q2_net, target_q1_net,
-                               target_q2_net, train_params, alg_params))
+    def __init__(self, env, mem, n_layers, n_depth, clip, train_params, alg_params):
+        super().__init__(env, mem, train_params, alg_params)
         self._mem = mem
-        self._policy_net = policy_net
-        self._q1_net = q1_net
-        self._q2_net = q2_net
+        self._policy_net, self._q1_net, self._q2_net, self._target_q1_net,\
+        self._target_q2_net = SAC.vanilla_nets(env, n_layers, n_depth, clip)
 
-        self._target_q1_net = target_q1_net
-        self._target_q2_net = target_q2_net
+        self._eval_policy_net = MakeDeterministic(self._policy_net)
 
-        self._eval_policy_net = MakeDeterministic(policy_net)
-
-        eval_path_collector = MdpPathCollector(
-            eval_env,
-            self._eval_policy_net
-        )
-        expl_path_collector = MdpPathCollector(
-            expl_env,
-            self._policy_net
-        )
-
-        self._trainer = SACTrainer(
+        self._alg = SACTrainer(
             env=self._expl_env,
             policy=self._policy_net,
             qf1=self._q1_net,
@@ -49,19 +33,61 @@ class SAC(Agent):
             target_qf2=self._target_q2_net,
             **train_params
         )
-        self._alg = TorchBatchRLAlgorithm(
-            trainer=self._trainer,
-            exploration_env=self._expl_env,
-            evaluation_env=self._eval_env,
-            exploration_data_collector=expl_path_collector,
-            evaluation_data_collector=eval_path_collector,
-            replay_buffer=mem,
-            **alg_params
-        )
 
-    def learn(self):
-        self._alg.to(torch_util.device)
-        self._alg.train()
+    def _train_step(self, n_train_steps):
+        for _ in range(n_train_steps):
+            batch = self._replay.random_batch(self._batch_size)
+            self._alg.train(batch)
+
+    def learn(self, env, eval_env, mem, **kwargs):
+        episode_len = kwargs['episode_len']
+        start_steps = kwargs['start_steps']
+        n_train_steps = kwargs['n_train_steps']
+        train_epochs = kwargs['train_epochs']
+        eval_interval = kwargs['eval_interval']
+
+        for i in train_epochs:
+            s = env.reset()
+
+            # TODO: rewards and returns tracking
+            # TODO: get policy loss
+
+            # TODO: DRY ME UP
+            steps = [start_steps, episode_len]
+            for k, stp in range(steps):
+                for _ in stp:
+                    if k == 0:
+                        a = env.sample()
+                    else:
+                        a = self._policy_net.pred(s)
+
+                    ns, r, done, _ = env.step(a)
+
+                    self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
+                                         terminal=1 if done else 0)
+                    if done:
+                        s = env.reset()
+                    else:
+                        s = ns
+
+            self._train_step(n_train_steps=n_train_steps)
+
+            if i % eval_interval == 0:
+                s = eval_env.reset()
+                eval_rewards = []
+                eval_G = []  # TODO: backed up returns
+                for _ in range(episode_len):
+                    a = self._policy_net(s)
+
+                    ns, r, done, _ = env.step(s)
+
+                    eval_rewards.append(r)
+                    if done:
+                        s = eval_env.reset()
+                    else:
+                        s = ns
+
+                # TODO: log eval here
 
     def pred(self, state):
         with torch.no_grad():
@@ -73,49 +99,49 @@ class SAC(Agent):
     def save(self, filepath):
         pass
 
+    @staticmethod
+    def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
+        hidden = [n_lay_nodes]*n_depth
 
-def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
-    hidden = [n_lay_nodes]*n_depth
+        obs_size = env.observation_space.shape[0]
+        act_size = env.action_space.shape[0]
 
-    obs_size = env.observation_space.shape[0]
-    act_size = env.action_space.shape[0]
+        q1_net = FlattenMlp(
+            hidden_sizes=hidden,
+            input_size=obs_size+act_size,
+            output_size=1,
+        ).to(device=torch_util.device)
 
-    q1_net = ConcatMlp(
-        hidden_sizes=hidden,
-        input_size=obs_size+act_size,
-        output_size=1,
-    ).to(device=torch_util.device)
+        q2_net = FlattenMlp(
+            hidden_sizes=hidden,
+            input_size=obs_size+act_size,
+            output_size=1,
+        ).to(device=torch_util.device)
 
-    q2_net = ConcatMlp(
-        hidden_sizes=hidden,
-        input_size=obs_size+act_size,
-        output_size=1,
-    ).to(device=torch_util.device)
+        policy_net = TanhGaussianPolicy(
+            hidden_sizes=hidden,
+            obs_dim=obs_size,
+            action_dim=act_size,
+        ).to(device=torch_util.device)
 
-    policy_net = TanhGaussianPolicy(
-        hidden_sizes=hidden,
-        obs_dim=obs_size,
-        action_dim=act_size,
-    ).to(device=torch_util.device)
+        target_q1_net = FlattenMlp(
+            hidden_sizes=hidden,
+            input_size=obs_size + act_size,
+            output_size=1,
+        ).to(device=torch_util.device)
 
-    target_q1_net = ConcatMlp(
-        hidden_sizes=hidden,
-        input_size=obs_size + act_size,
-        output_size=1,
-    ).to(device=torch_util.device)
+        target_q2_net = FlattenMlp(
+            hidden_sizes=hidden,
+            input_size=obs_size + act_size,
+            output_size=1,
+        ).to(device=torch_util.device)
 
-    target_q2_net = ConcatMlp(
-        hidden_sizes=hidden,
-        input_size=obs_size + act_size,
-        output_size=1,
-    ).to(device=torch_util.device)
+        nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
+        for n in nets:
+            for p in n.parameters():
+                p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
 
-    nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
-    for n in nets:
-        for p in n.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
-
-    return (n for n in nets)
+        return (n for n in nets)
 
 
 def simple_mem(size, env):
