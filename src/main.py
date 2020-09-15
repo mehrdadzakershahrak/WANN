@@ -77,13 +77,15 @@ def run(config):
             m = alg.load()  # TODO: load SAC model here
         else:
             train_params = AGENT_CONFIG['train_params']
-            q_net, v_net, policy_net = alg.vanilla_nets(expl_env, AGENT_CONFIG['n_hidden'],
-                                                        AGENT_CONFIG['n_depth'],
-                                                        clip_val=AGENT_CONFIG['clip_val'])
+            q1_net, q2_net, policy_net, \
+            target_q1_net, target_q2_net = alg.vanilla_nets(expl_env, AGENT_CONFIG['n_hidden'],
+                                                            AGENT_CONFIG['n_depth'],
+                                                            clip_val=AGENT_CONFIG['clip_val'])
 
             mem = alg.simple_mem(AGENT_CONFIG['mem_size'], expl_env)
             m = alg.SAC(eval_env, expl_env, mem, policy_net,
-                        q_net, v_net, train_params, alg_params)
+                        q1_net, q2_net, target_q1_net,
+                        target_q2_net, train_params, alg_params)
     else:
         raise Exception(f'Algorithm configured is not currently supported')
 

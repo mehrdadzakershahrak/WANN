@@ -16,19 +16,21 @@ if torch.cuda.is_available():
 
 class SAC(Agent):
     def __init__(self, eval_env, expl_env, mem, policy_net,
-                 q1_net, q2_net, train_params, alg_params):
+                 q1_net, q2_net, target_q1_net, target_q2_net,
+                 train_params, alg_params):
         super().__init__(eval_env, expl_env, mem, train_params, alg_params,
-                         nets=(policy_net, q1_net, q2_net, train_params,
-                               alg_params))
+                         nets=(policy_net, q1_net, q2_net, target_q1_net,
+                               target_q2_net, train_params, alg_params))
         self._mem = mem
         self._policy_net = policy_net
         self._q1_net = q1_net
         self._q2_net = q2_net
 
-        self._target_q1_net = copy.deepcopy(q1_net)
-        self._target_q2_net = copy.deepcopy(q2_net)
+        self._target_q1_net = target_q1_net
+        self._target_q2_net = target_q2_net
 
-        self._eval_policy_net = MakeDeterministic(copy.deepcopy(policy_net))
+        self._eval_policy_net = MakeDeterministic(policy_net)
+
         eval_path_collector = MdpPathCollector(
             eval_env,
             self._eval_policy_net
@@ -78,13 +80,13 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
     obs_size = env.observation_space.shape[0]
     act_size = env.action_space.shape[0]
 
-    v_net = ConcatMlp(
+    q1_net = ConcatMlp(
         hidden_sizes=hidden,
         input_size=obs_size+act_size,
         output_size=1,
     ).to(device=torch_util.device)
 
-    q_net = ConcatMlp(
+    q2_net = ConcatMlp(
         hidden_sizes=hidden,
         input_size=obs_size+act_size,
         output_size=1,
@@ -96,7 +98,19 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
         action_dim=act_size,
     ).to(device=torch_util.device)
 
-    nets = [q_net, v_net, policy_net]
+    target_q1_net = ConcatMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size + act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
+
+    target_q2_net = ConcatMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size + act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
+
+    nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
     for n in nets:
         for p in n.parameters():
             p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
