@@ -12,11 +12,9 @@ import numpy as np
 import config as run_config
 import sys
 from mpi4py import MPI
+import random
 import subprocess
-import pickle
 from agent import sac as alg
-
-from rlkit.data_management.replay_buffer import ReplayBuffer
 
 comm = MPI.COMM_WORLD
 rank = 0
@@ -34,7 +32,6 @@ def run(config):
     TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
     RUN_CHECKPOINT = f'{RESULTS_PATH}_checkpoint{os.sep}'
-    RUN_CHECKPOINT_FN = 'run-checkpoint.pkl'
 
     NUM_WORKERS = config['NUM_WORKERS']
     WANN_ENV_ID = config['WANN_ENV_ID']
@@ -72,8 +69,12 @@ def run(config):
 
     # TODO: re-add vec env
     ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-    expl_env = gym.make(ENV_ID)
+    env = gym.make(ENV_ID)
+    env.seed(run_config.SEED)
+
     eval_env = gym.make(ENV_ID)
+    eval_seed = random.choice(range(SEED_RANGE_MAX))+run_config.SEED
+    eval_env.seed(eval_seed)
 
     alg_params = AGENT_CONFIG['alg_params']
     if GAME_CONFIG.alg == task.ALG.SAC:
@@ -82,12 +83,12 @@ def run(config):
         else:
             train_params = AGENT_CONFIG['train_params']
             q1_net, q2_net, policy_net, \
-            target_q1_net, target_q2_net = alg.vanilla_nets(expl_env, AGENT_CONFIG['n_hidden'],
+            target_q1_net, target_q2_net = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
                                                             AGENT_CONFIG['n_depth'],
                                                             clip_val=AGENT_CONFIG['clip_val'])
 
-            mem = alg.simple_mem(AGENT_CONFIG['mem_size'], expl_env)
-            m = alg.SAC(eval_env, expl_env, mem, policy_net,
+            mem = alg.simple_mem(AGENT_CONFIG['mem_size'], env)
+            m = alg.SAC(env, eval_env, mem, policy_net,
                         q1_net, q2_net, target_q1_net,
                         target_q2_net, train_params, alg_params)
     else:
