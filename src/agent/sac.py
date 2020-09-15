@@ -11,16 +11,17 @@ if torch.cuda.is_available():
 
 
 class SAC(Agent):
-    def __init__(self, env, eval_env, mem, n_layers, n_depth, clip,
+    def __init__(self, env, eval_env, mem, nets,
                  train_params, alg_params):
-        super().__init__(env, mem, train_params, alg_params)
+        super().__init__(env, mem, nets, train_params, alg_params)
         self._mem = mem
 
         self._env = env
         self._eval_env = eval_env
 
         self._policy_net, self._q1_net, self._q2_net, self._target_q1_net,\
-        self._target_q2_net = SAC.vanilla_nets(env, n_layers, n_depth, clip)
+        self._target_q2_net = nets['policy_net'], nets['q1_net'], nets['q2_net'],\
+                              nets['target_q1_net'], nets['target_q2_net']
 
         self._eval_policy_net = MakeDeterministic(self._policy_net)
 
@@ -138,7 +139,13 @@ class SAC(Agent):
             for p in n.parameters():
                 p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
 
-        return (n for n in nets)
+        return dict(
+            policy_net=policy_net,
+            q1_net=q1_net,
+            q2_net=q2_net,
+            target_q1_net=target_q1_net,
+            target_q2_net=target_q2_net
+        )
 
 
 def load(filepath):
