@@ -10,15 +10,20 @@ import torch
 import utils
 import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
+import copy
 
 if torch.cuda.is_available():
     torch_util.set_gpu_mode(True)
 
 
 class SAC(Agent):
-    def __init__(self, env, mem, n_layers, n_depth, clip, train_params, alg_params):
+    def __init__(self, env, eval_env, mem, n_layers, n_depth, clip, train_params, alg_params):
         super().__init__(env, mem, train_params, alg_params)
         self._mem = mem
+
+        self._env = env
+        self._eval_env = eval_env
+
         self._policy_net, self._q1_net, self._q2_net, self._target_q1_net,\
         self._target_q2_net = SAC.vanilla_nets(env, n_layers, n_depth, clip)
 
@@ -39,7 +44,7 @@ class SAC(Agent):
             batch = self._replay.random_batch(self._batch_size)
             self._alg.train(batch)
 
-    def learn(self, env, eval_env, mem, **kwargs):
+    def learn(self, **kwargs):
         episode_len = kwargs['episode_len']
         start_steps = kwargs['start_steps']
         n_train_steps = kwargs['n_train_steps']
@@ -47,7 +52,7 @@ class SAC(Agent):
         eval_interval = kwargs['eval_interval']
 
         for i in train_epochs:
-            s = env.reset()
+            s = self._env.reset()
 
             # TODO: rewards and returns tracking
             # TODO: get policy loss
@@ -57,33 +62,33 @@ class SAC(Agent):
             for k, stp in range(steps):
                 for _ in stp:
                     if k == 0:
-                        a = env.sample()
+                        a = self._env.sample()
                     else:
                         a = self._policy_net.pred(s)
 
-                    ns, r, done, _ = env.step(a)
+                    ns, r, done, _ = self._env.step(a)
 
                     self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
                                          terminal=1 if done else 0)
                     if done:
-                        s = env.reset()
+                        s = self._env.reset()
                     else:
                         s = ns
 
             self._train_step(n_train_steps=n_train_steps)
 
             if i % eval_interval == 0:
-                s = eval_env.reset()
+                s = self._eval_env.reset()
                 eval_rewards = []
                 eval_G = []  # TODO: backed up returns
                 for _ in range(episode_len):
                     a = self._policy_net(s)
 
-                    ns, r, done, _ = env.step(s)
+                    ns, r, done, _ = self._eval_env.step(s)
 
                     eval_rewards.append(r)
                     if done:
-                        s = eval_env.reset()
+                        s = self._eval_env.reset()
                     else:
                         s = ns
 
