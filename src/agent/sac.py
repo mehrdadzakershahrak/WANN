@@ -1,23 +1,18 @@
-from agent.agent import Agent # TODO better naming here
-import copy
+from agent.agent import Agent  # TODO better naming here
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.networks import FlattenMlp
-from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.sac.policies import MakeDeterministic, TanhGaussianPolicy
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-import numpy as np
 import torch
-import utils
 import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
-import copy
 
 if torch.cuda.is_available():
     torch_util.set_gpu_mode(True)
 
 
 class SAC(Agent):
-    def __init__(self, env, eval_env, mem, n_layers, n_depth, clip, train_params, alg_params):
+    def __init__(self, env, eval_env, mem, n_layers, n_depth, clip,
+                 train_params, alg_params):
         super().__init__(env, mem, train_params, alg_params)
         self._mem = mem
 
@@ -98,9 +93,6 @@ class SAC(Agent):
         with torch.no_grad():
             return self.policy_net(state).max(1)[1].view(1, 1)
 
-    def load(self, filepath):
-        pass
-
     def save(self, filepath):
         pass
 
@@ -147,6 +139,10 @@ class SAC(Agent):
                 p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
 
         return (n for n in nets)
+
+
+def load(filepath):
+    pass
 
 
 def simple_mem(size, env):
