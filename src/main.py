@@ -22,8 +22,12 @@ SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
 LOG_INTERVAL = 10
 
+log = run_config.log()
+
 
 def run(config):
+    log.info(f'Beginning run for experiment {run_config.EXPERIMENT_ID}')
+
     RESULTS_PATH = config['RESULTS_PATH']
     EXPERIMENTS_PREFIX = f'{RESULTS_PATH}{run_config.EXPERIMENT_ID}{os.sep}'
     ARTIFACTS_PATH = f'{EXPERIMENTS_PREFIX}artifact{os.sep}'

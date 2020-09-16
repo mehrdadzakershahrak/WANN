@@ -7,10 +7,14 @@ import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
 import os
 import pickle
+import config as run_config
 
 
 if torch.cuda.is_available():
     torch_util.set_gpu_mode(True)
+
+
+log = run_config.log()
 
 
 class SAC(Agent):

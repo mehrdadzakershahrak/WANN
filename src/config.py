@@ -19,26 +19,30 @@ RENDER_TEST_GIFS = True
 NUM_TRAIN_STEPS = 1000
 ############################################
 
+performance_log_path = f'result{os.sep}{EXPERIMENT_ID}{os.sep}log{os.sep}alg-step{os.sep}'
+if not os.path.isdir(performance_log_path):
+    os.makedirs(performance_log_path)
+
 logging.config.dictConfig(
     dict(
         version=1,
         formatters=dict(
             jsonformat={
                 'class': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-                'format': '%(message)s %(pathname)s %(lineno)d'
+                'format': '%(message)s'
             },
         ),
         handlers=dict(
-            stdout={
-                'class': 'logging.StreamHandler',
-                'formatter': 'jsonformat'
-            },
             file={
                 'class': 'logging.FileHandler',
-                'filename': f'result{os.sep}{EXPERIMENT_ID}{os.sep}log{os.sep}alg-step{os.sep}alg-performance.log',
+                'filename': performance_log_path+'alg-performance.log',
                 'mode': 'w',
                 'formatter': 'jsonformat',
             },
+            stdout={
+                'class': 'logging.StreamHandler',
+                'formatter': 'jsonformat'
+            }
         ),
         loggers={
             '': {
