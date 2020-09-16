@@ -126,7 +126,7 @@ class SAC(Agent):
             if i % checkpoint_interval == 0:
                 self.save(artifact_path)
 
-            self.life_tracker['n_train_epochs'] += 1
+            self.life_tracker['total_n_train_epochs'] += 1
 
     def pred(self, state, deterministic=False):
         state = torch.from_numpy(state).float().to(torch_util.device)
