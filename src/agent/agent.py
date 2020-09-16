@@ -13,25 +13,21 @@ class Agent(object):
             n_train_batches=int(0),
             n_train_episodes=int(0),
             n_train_steps=int(0),
-            n_episode_steps=int(0),
+            n_train_episode_steps=int(0),
             n_evals=int(0)
         )
 
         self._mem = mem
 
-    def updt_episode_cnts(self, results_tracker):
-        rewards = np.array(results_tracker['rewards'])
-
-        results_tracker['episode_mean_rewards'] = np.mean(rewards)/float(results_tracker['n_episodes'])
-        results_tracker['episode_min_rewards'] = np.min(rewards)/float(results_tracker['n_episodes'])
-        results_tracker['episode_max_rewards'] = np.max(rewards)/float(results_tracker['n_episodes'])
-
     def log_performance(self, results_tracker):
+        rewards = np.array(results_tracker['rewards'])
+        n_episodes_since_last_log = results_tracker['n_episodes_since_last_log']
         summary = dict(
             cur_mem_size=self._mem.num_steps_can_sample(),
-            episode_mean_rewards=results_tracker['episode_mean_rewards'],
-            episode_min_rewards=results_tracker['episode_min_rewards'],
-            episode_max_rewards=results_tracker['episode_max_rewards'],
+            episode_mean_rewards=rewards.mean(),
+            episode_min_rewards=rewards.min(),
+            episode_max_rewards=rewards.max(),
+            n_episodes_since_last_log=n_episodes_since_last_log
         )
         summary.update(self.life_tracker)
         log.info(summary)
@@ -41,8 +37,5 @@ class Agent(object):
         return copy.deepcopy(dict(
             id=id,
             rewards=[],
-            episode_mean_rewards=0.0,
-            episode_max_rewards=0.0,
-            episode_min_rewards=0.0,
-            n_episodes=int(0)
+            n_episodes_since_last_log=int(0)
         ))

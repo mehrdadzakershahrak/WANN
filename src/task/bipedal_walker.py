@@ -57,7 +57,7 @@ def get_task_config():
             clip_val=1,
             train_step_params=dict(
                 discount=0.99,
-                soft_target_tau=.01,
+                soft_target_tau=5e-3,
                 target_update_period=1,
                 policy_lr=3e-4,
                 qf_lr=3e-4,
@@ -73,7 +73,7 @@ def get_task_config():
                 start_steps=1000,
                 n_train_steps=400,
                 eval_interval=100,
-                log_interval=10,
+                log_interval=100,
                 checkpoint_interval=1
             )
         ),

@@ -87,6 +87,7 @@ class SAC(Agent):
 
                 ns, r, done, _ = self._env.step(a)
 
+                self.life_tracker['n_train_episode_steps'] += 1
                 train_rt['rewards'].append(r)
 
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
@@ -94,9 +95,7 @@ class SAC(Agent):
                 if done:
                     s = self._env.reset()
                     self.life_tracker['n_train_episodes'] += 1
-
-                    train_rt['n_episodes'] += 1
-                    self.updt_episode_cnts(train_rt)
+                    train_rt['n_episodes_since_last_log'] += 1
                 else:
                     s = ns
 
@@ -120,22 +119,21 @@ class SAC(Agent):
 
                     if done:
                         s = self._eval_env.reset()
-
-                        eval_rt['n_episodes'] += 1
-                        self.updt_episode_cnts(eval_rt)
+                        eval_rt['n_episodes_since_last_log'] += 1
                     else:
                         s = ns
 
                 eval_called = True
 
-            if i % log_interval == 0:
+            if self.life_tracker['n_train_episodes'] % log_interval == 0:
                 self.log_performance(train_rt)
                 train_rt = Agent.results_tracker(id='train_performance')
 
                 if eval_called:
                     # self.log_performance(eval_rt)
-                    eval_rt = Agent.results_tracker(id='eval_performance')
-                    eval_called = False
+                    # eval_rt = Agent.results_tracker(id='eval_performance')
+                    # eval_called = False
+                    pass
 
             self.life_tracker['n_train_epochs'] += 1
 
