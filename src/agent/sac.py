@@ -183,6 +183,8 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
         hidden_sizes=hidden,
         obs_dim=obs_size,
         action_dim=act_size,
+        min_std=np.exp(-20.),
+        max_std=np.exp(2.)
     ).to(device=torch_util.device)
 
     target_q1_net = FlattenMlp(
@@ -197,7 +199,7 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
         output_size=1,
     ).to(device=torch_util.device)
 
-    nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
+    nets = [q1_net, q2_net, policy_net]
     for n in nets:
         for p in n.parameters():
             p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
