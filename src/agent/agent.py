@@ -48,7 +48,7 @@ class Agent(object):
             id=id,
             train_rewards=[],
             eval_rewards=[],
-            n_episodes_since_last_log=int(0),
+            n_train_episodes_since_last_log=int(0),
             train_interval_timesteps=int(0),
             eval_interval_timesteps=int(0)
         ))
