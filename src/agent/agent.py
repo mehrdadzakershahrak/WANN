@@ -9,12 +9,11 @@ class Agent(object):
     def __init__(self, env, eval_env, mem, nets, train_step_params):
         # TODO: add common interface for agents in future iteration
         self.life_tracker = dict(
-            n_train_epochs=int(1),
-            n_train_batches=int(0),
-            n_train_episodes=int(0),
-            n_train_steps=int(0),
-            n_train_episode_steps=int(0),
-            n_evals=int(0)
+            total_n_train_epochs=int(1),
+            total_n_train_batches=int(0),
+            total_n_train_episodes=int(0),
+            total_n_train_steps=int(0),
+            total_n_evals=int(0)
         )
 
         self._mem = mem
@@ -32,10 +31,15 @@ class Agent(object):
         summary.update(self.life_tracker)
         log.info(summary)
 
+        # TODO: csv logging including raw episodic rewards
+
     @staticmethod
     def results_tracker(id):
         return copy.deepcopy(dict(
             id=id,
-            rewards=[],
-            n_episodes_since_last_log=int(0)
+            train_rewards=[],
+            eval_rewards=[],
+            n_episodes_since_last_log=int(0),
+            train_interval_timesteps=int(0),
+            eval_interval_timesteps=int(0)
         ))

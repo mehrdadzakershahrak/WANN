@@ -70,7 +70,7 @@ def get_task_config():
                 batch_size=256,
                 episode_len=4000,
                 eval_episode_len=1600,
-                start_steps=1000,
+                start_steps=100,
                 n_train_steps=1000,
                 eval_interval=100,
                 log_interval=10,

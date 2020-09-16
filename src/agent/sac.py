@@ -60,6 +60,8 @@ class SAC(Agent):
         log_interval = kwargs['log_interval']
         artifact_path = results_path+f'artifact'
 
+        # TODO: log summary of current config
+
         # TODO: DRY ME UP
         # TODO: use RAY Sampler for parallel simulation sampling
         s = self._env.reset()
@@ -75,8 +77,6 @@ class SAC(Agent):
                 s = ns
 
         train_rt = Agent.results_tracker(id='train_performance')
-        eval_rt = Agent.results_tracker(id='eval_performance')
-        eval_called = False
         for i in range(train_epochs):
             s = self._env.reset()
 
@@ -87,61 +87,51 @@ class SAC(Agent):
 
                 ns, r, done, _ = self._env.step(a)
 
-                self.life_tracker['n_train_episode_steps'] += 1
-                train_rt['rewards'].append(r)
+                self.life_tracker['total_n_train_steps'] += 1
+                train_rt['train_interval_timesteps'] += 1
+                train_rt['train_rewards'].append(r)
 
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
                                      terminal=1 if done else 0, env_info=dict())
                 if done:
                     s = self._env.reset()
-                    self.life_tracker['n_train_episodes'] += 1
+                    self.life_tracker['total_n_train_episodes'] += 1
                     train_rt['n_episodes_since_last_log'] += 1
+
+                    if self.life_tracker['total_n_train_episodes'] % log_interval == 0:
+                        if self.life_tracker['total_n_train_episodes'] % eval_interval == 0:
+                            self.life_tracker['total_n_evals'] += 1
+                            train_rt['eval_interval_timesteps'] = eval_episode_len
+
+                            s = self._eval_env.reset()
+                            for _ in range(eval_episode_len):
+                                a = self.pred(s)
+
+                                ns, r, done, _ = self._eval_env.step(a)
+                                train_rt['eval_rewards'].append(r)  # TODO: fix rewards tracking
+
+                                if done:
+                                    s = self._eval_env.reset()
+                                else:
+                                    s = ns
+
+                        self.log_performance(train_rt)
+                        train_rt = Agent.results_tracker(id='train_performance')
                 else:
                     s = ns
 
-            self.life_tracker['n_train_steps'] += episode_len
-
             self._train_step(n_train_steps, batch_size)
-            self.life_tracker['n_train_batches'] += batch_size
+            self.life_tracker['total_n_train_batches'] += batch_size
 
             if i % checkpoint_interval == 0:
                 self.save(artifact_path)
 
-            if i % eval_interval == 0:
-                self.life_tracker['n_evals'] += 1
-
-                s = self._eval_env.reset()
-                for _ in range(eval_episode_len):
-                    a = self.pred(s)
-
-                    ns, r, done, _ = self._eval_env.step(a)
-                    eval_rt['rewards'].append(r)  # TODO: fix rewards tracking
-
-                    if done:
-                        s = self._eval_env.reset()
-                        eval_rt['n_episodes_since_last_log'] += 1
-                    else:
-                        s = ns
-
-                eval_called = True
-
-            if self.life_tracker['n_train_episodes'] % log_interval == 0:
-                self.log_performance(train_rt)
-                train_rt = Agent.results_tracker(id='train_performance')
-
-                if eval_called:
-                    # self.log_performance(eval_rt)
-                    # eval_rt = Agent.results_tracker(id='eval_performance')
-                    # eval_called = False
-                    pass
-
             self.life_tracker['n_train_epochs'] += 1
 
-    # TODO: change eval pred to deterministic
-    def pred(self, state):
+    def pred(self, state, deterministic=False):
         state = torch.from_numpy(state).float().to(torch_util.device)
         with torch.no_grad():
-            return self._policy_net(state)[0].cpu().detach().numpy()
+            return self._policy_net(state, deterministic=deterministic)[0].cpu().detach().numpy()
 
     def save(self, filepath):
         if not os.path.isdir(filepath):
