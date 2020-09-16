@@ -43,7 +43,7 @@ class SAC(Agent):
             batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
-    def learn(self, **kwargs):
+    def learn(self, results_path, **kwargs):
         episode_len = kwargs['episode_len']
         eval_episode_len = kwargs['eval_episode_len']
         start_steps = kwargs['start_steps']
@@ -51,6 +51,8 @@ class SAC(Agent):
         train_epochs = kwargs['train_epochs']
         eval_interval = kwargs['eval_interval']
         batch_size = kwargs['batch_size']
+        checkpoint_interval = kwargs['checkpoint_interval']
+        artifact_path = results_path+f'artifact'
 
         for i in range(train_epochs):
             s = self._env.reset()
@@ -77,6 +79,9 @@ class SAC(Agent):
                         s = ns
 
             self._train_step(n_train_steps, batch_size)
+
+            if i % checkpoint_interval == 0:
+                self.save(artifact_path)
 
             if i % eval_interval == 0:
                 s = self._eval_env.reset()
@@ -112,8 +117,8 @@ class SAC(Agent):
         for i, fn in enumerate(net_fps):
             torch.save(nets[i], f'{filepath}{os.sep}{fn}')
 
-        comps = [self._mem, self._train_step_params]
-        comp_fps = ['mem.pkl', 'train-step-params.pkl']
+        comps = [self._train_step_params]
+        comp_fps = ['train-step-params.pkl']
         for i, fn in enumerate(comp_fps):
             with open(f'{filepath}{os.sep}{fn}', 'wb') as f:
                 pickle.dump(comps[i], f)
@@ -169,7 +174,7 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
     )
 
 
-def load(env, eval_env, filepath):
+def load(env, eval_env, mem, filepath):
     policy_net = torch.load(f'{filepath}{os.sep}policy-net.pt')
     q1_net = torch.load(f'{filepath}{os.sep}q1-net.pt')
     q2_net = torch.load(f'{filepath}{os.sep}q2-net.pt')
@@ -183,9 +188,6 @@ def load(env, eval_env, filepath):
         target_q1_net=target_q1_net,
         target_q2_net=target_q2_net
     )
-
-    with open(f'{filepath}{os.sep}mem.pkl', 'rb') as f:
-        mem = pickle.load(f)
 
     with open(f'{filepath}{os.sep}train-step-params.pkl', 'rb') as f:
         train_step_params = pickle.load(f)

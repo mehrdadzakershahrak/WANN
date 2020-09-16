@@ -78,15 +78,18 @@ def run(config):
 
     # TODO: save/load if on wann or SAC optimize step for prev experiment starts
     if GAME_CONFIG.alg == task.ALG.SAC:
+        mem = alg.simple_mem(AGENT_CONFIG['mem_size'], env)
+
         if run_config.USE_PREV_EXPERIMENT:
-            m = alg.load(run_config.PREV_EXPERIMENT_PATH)  # TODO: load SAC model here
+            m = alg.load(env, eval_env, mem, ARTIFACTS_PATH)  # TODO: load SAC model here
+
+            print('test')
         else:
             train_step_params = AGENT_CONFIG['train_step_params']
             nets = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
                                     AGENT_CONFIG['n_depth'],
                                     clip_val=AGENT_CONFIG['clip_val'])
 
-            mem = alg.simple_mem(AGENT_CONFIG['mem_size'], env)
             m = alg.SAC(env, eval_env, mem, nets, train_step_params)
     else:
         raise Exception(f'Algorithm configured is not currently supported')
@@ -107,8 +110,7 @@ def run(config):
 
             learn_params = AGENT_CONFIG['learn_params']
             # TODO:  SAC learning / logging / checkpointing here
-            m.learn(**learn_params)
-            m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
+            m.learn(EXPERIMENTS_PREFIX, **learn_params)
             print('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
         else:
             break  # break if subprocess

@@ -73,7 +73,8 @@ def get_task_config():
                 start_steps=10,
                 n_train_steps=10,
                 eval_interval=10,
-                log_interval=10
+                log_interval=10,
+                checkpoint_interval=1
             )
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
