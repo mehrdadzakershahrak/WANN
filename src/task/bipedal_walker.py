@@ -62,8 +62,8 @@ def get_task_config():
                 policy_lr=1e-3,
                 qf_lr=1e-3,
                 reward_scale=1,
-                use_automatic_entropy_tuning=False
-                # TODO: set alpha
+                use_automatic_entropy_tuning=False,
+                target_entropy=.01
             ),
             learn_params=dict(
                 train_epochs=3000,
