@@ -67,7 +67,7 @@ def get_task_config():
             ),
             learn_params=dict(
                 train_epochs=3000,
-                batch_size=256,
+                batch_size=256, # TODO: after converge try smaller batch size e.g. 64
                 episode_len=1600,
                 eval_episode_len=1600,
                 start_steps=1000,
@@ -79,7 +79,7 @@ def get_task_config():
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,
-        VIDEO_LENGTH=1500,
+        VIDEO_LENGTH=1600,
         RESULTS_PATH=task.RESULTS_PATH
     )
 
