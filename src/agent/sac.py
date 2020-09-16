@@ -8,6 +8,7 @@ from agent.mem import Mem
 import os
 import pickle
 import config as run_config
+import numpy as np
 
 
 if torch.cuda.is_available():
@@ -56,53 +57,84 @@ class SAC(Agent):
         eval_interval = kwargs['eval_interval']
         batch_size = kwargs['batch_size']
         checkpoint_interval = kwargs['checkpoint_interval']
+        log_interval = kwargs['log_interval']
         artifact_path = results_path+f'artifact'
 
+        # TODO: DRY ME UP
+        s = self._env.reset()
+        for _ in range(start_steps):
+            a = self._env.action_space.sample()
+            ns, r, done, _ = self._env.step(a)
+
+            self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
+                                 terminal=1 if done else 0, env_info=dict())
+            if done:
+                s = self._env.reset()
+            else:
+                s = ns
+
+        train_rt = Agent.results_tracker(id='train_performance')
+        eval_rt = Agent.results_tracker(id='eval_performance')
+
+        eval_called = False
         for i in range(train_epochs):
             s = self._env.reset()
-
-            # TODO: rewards and returns tracking
             # TODO: get policy loss
 
-            # TODO: DRY ME UP
-            steps = [start_steps, episode_len]
-            for k, stp in enumerate(steps):
-                for _ in range(stp):
-                    if k == 0:
-                        a = self._env.action_space.sample()
-                    else:
-                        a = self.pred(s)
+            for _ in range(episode_len):
+                a = self.pred(s)
 
-                    ns, r, done, _ = self._env.step(a)
+                ns, r, done, _ = self._env.step(a)
 
-                    self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
-                                         terminal=1 if done else 0, env_info=dict())
-                    if done:
-                        s = self._env.reset()
-                    else:
-                        s = ns
+                train_rt['rewards'].append(r)
+
+                self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
+                                     terminal=1 if done else 0, env_info=dict())
+                if done:
+                    s = self._env.reset()
+                    self.life_tracker['n_train_episodes'] += 1
+
+                    train_rt['n_episodes'] += 1
+                    self.updt_episode_cnts(train_rt)
+                else:
+                    s = ns
+
+            self.life_tracker['n_train_steps'] += episode_len
 
             self._train_step(n_train_steps, batch_size)
+            self.life_tracker['n_train_batches'] += batch_size
 
             if i % checkpoint_interval == 0:
                 self.save(artifact_path)
 
             if i % eval_interval == 0:
+                self.life_tracker['n_evals'] += 1
+
                 s = self._eval_env.reset()
-                eval_rewards = []
-                eval_G = []  # TODO: backed up returns
                 for _ in range(eval_episode_len):
                     a = self.pred(s)
 
                     ns, r, done, _ = self._eval_env.step(a)
+                    eval_rt['rewards'].append(r)  # TODO: fix rewards tracking
 
-                    eval_rewards.append(r)
                     if done:
                         s = self._eval_env.reset()
+
+                        eval_rt['n_episodes'] += 1
+                        self.updt_episode_cnts(eval_rt)
                     else:
                         s = ns
 
-                # TODO: log eval here
+                eval_called = True
+
+            if i % log_interval == 0:
+                self.log_performance(train_rt)
+                train_rt = Agent.results_tracker()
+
+                if eval_called:
+                    self.log_performance(eval_rt)
+                    eval_rt = Agent.results_tracker()
+                    eval_called = False
 
     # TODO: change eval pred to deterministic
     def pred(self, state):
@@ -119,12 +151,12 @@ class SAC(Agent):
         net_fps = ['policy-net.pt', 'q1-net.pt', 'q2-net.pt',
                    'target-q1-net.pt', 'target-q2-net.pt']
         for i, fn in enumerate(net_fps):
-            torch.save(nets[i], f'{filepath}{os.sep}{fn}')
+            torch.save(nets[i], f'{filepath}{fn}')
 
         comps = [self._train_step_params]
         comp_fps = ['train-step-params.pkl']
         for i, fn in enumerate(comp_fps):
-            with open(f'{filepath}{os.sep}{fn}', 'wb') as f:
+            with open(f'{filepath}{fn}', 'wb') as f:
                 pickle.dump(comps[i], f)
 
 
@@ -179,11 +211,11 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
 
 
 def load(env, eval_env, mem, filepath):
-    policy_net = torch.load(f'{filepath}{os.sep}policy-net.pt')
-    q1_net = torch.load(f'{filepath}{os.sep}q1-net.pt')
-    q2_net = torch.load(f'{filepath}{os.sep}q2-net.pt')
-    target_q1_net = torch.load(f'{filepath}{os.sep}target-q1-net.pt')
-    target_q2_net = torch.load(f'{filepath}{os.sep}target-q2-net.pt')
+    policy_net = torch.load(f'{filepath}policy-net.pt')
+    q1_net = torch.load(f'{filepath}q1-net.pt')
+    q2_net = torch.load(f'{filepath}q2-net.pt')
+    target_q1_net = torch.load(f'{filepath}target-q1-net.pt')
+    target_q2_net = torch.load(f'{filepath}target-q2-net.pt')
 
     nets = dict(
         policy_net=policy_net,

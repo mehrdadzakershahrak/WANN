@@ -86,8 +86,6 @@ def run(config):
 
         if run_config.USE_PREV_EXPERIMENT:
             m = alg.load(env, eval_env, mem, ARTIFACTS_PATH)  # TODO: load SAC model here
-
-            print('test')
         else:
             train_step_params = AGENT_CONFIG['train_step_params']
             nets = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
