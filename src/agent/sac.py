@@ -182,9 +182,7 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
     policy_net = TanhGaussianPolicy(
         hidden_sizes=hidden,
         obs_dim=obs_size,
-        action_dim=act_size,
-        min_std=np.exp(-20.),
-        max_std=np.exp(2.)
+        action_dim=act_size
     ).to(device=torch_util.device)
 
     target_q1_net = FlattenMlp(
