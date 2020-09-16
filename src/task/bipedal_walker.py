@@ -68,10 +68,10 @@ def get_task_config():
             learn_params=dict(
                 train_epochs=3000,
                 batch_size=256,
-                episode_len=1000,
+                episode_len=1600,
                 eval_episode_len=1600,
                 start_steps=1000,
-                n_train_steps=250,
+                n_train_steps=400,
                 eval_interval=100,
                 log_interval=10,
                 checkpoint_interval=1
