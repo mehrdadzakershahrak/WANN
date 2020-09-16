@@ -40,7 +40,7 @@ def get_task_config():
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=400,
+                  max_episode_length=1600,
                   alg=task.ALG.SAC,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
@@ -55,17 +55,7 @@ def get_task_config():
             n_hidden=256,
             n_depth=2,
             clip_val=1,
-            alg_params=dict(
-                num_epochs=300,
-                num_eval_steps_per_epoch=1,
-                num_trains_per_train_loop=1,
-                num_train_loops_per_epoch=10,
-                num_expl_steps_per_train_loop=1000,
-                min_num_steps_before_training=1000,
-                max_path_length=1000,
-                batch_size=256
-            ),
-            train_params=dict(
+            train_step_params=dict(
                 discount=0.99,
                 soft_target_tau=5e-3,
                 target_update_period=1,
@@ -73,6 +63,16 @@ def get_task_config():
                 qf_lr=1e-3,
                 reward_scale=1,
                 use_automatic_entropy_tuning=False
+                # TODO: set alpha
+            ),
+            learn_params=dict(
+                train_epochs=3000,
+                batch_size=256,
+                episode_len=1600,
+                start_steps=10,
+                n_train_steps=1000,
+                eval_interval=10,
+                log_interval=10
             )
         ),
         ENTRY_POINT='task.bipedal_walker:_env',

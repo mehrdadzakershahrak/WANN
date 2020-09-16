@@ -12,8 +12,8 @@ if torch.cuda.is_available():
 
 class SAC(Agent):
     def __init__(self, env, eval_env, mem, nets,
-                 train_params, alg_params):
-        super().__init__(env, mem, nets, train_params, alg_params)
+                 train_step_params):
+        super().__init__(env, eval_env, mem, nets, train_step_params)
         self._mem = mem
 
         self._env = env
@@ -26,18 +26,18 @@ class SAC(Agent):
         self._eval_policy_net = MakeDeterministic(self._policy_net)
 
         self._alg = SACTrainer(
-            env=self._expl_env,
+            env=self._env,
             policy=self._policy_net,
             qf1=self._q1_net,
             qf2=self._q2_net,
             target_qf1=self._target_q1_net,
             target_qf2=self._target_q2_net,
-            **train_params
+            **train_step_params
         )
 
-    def _train_step(self, n_train_steps):
+    def _train_step(self, n_train_steps, batch_size):
         for _ in range(n_train_steps):
-            batch = self._replay.random_batch(self._batch_size)
+            batch = self._replay.random_batch(batch_size)
             self._alg.train(batch)
 
     def learn(self, **kwargs):
@@ -47,7 +47,7 @@ class SAC(Agent):
         train_epochs = kwargs['train_epochs']
         eval_interval = kwargs['eval_interval']
 
-        for i in train_epochs:
+        for i in range(train_epochs):
             s = self._env.reset()
 
             # TODO: rewards and returns tracking
@@ -55,17 +55,17 @@ class SAC(Agent):
 
             # TODO: DRY ME UP
             steps = [start_steps, episode_len]
-            for k, stp in range(steps):
-                for _ in stp:
+            for k, stp in enumerate(steps):
+                for _ in range(stp):
                     if k == 0:
-                        a = self._env.sample()
+                        a = self._env.action_space.sample()
                     else:
-                        a = self._policy_net.pred(s)
+                        a = self._train_pred(s)
 
                     ns, r, done, _ = self._env.step(a)
 
                     self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
-                                         terminal=1 if done else 0)
+                                         terminal=1 if done else 0, env_info=dict())
                     if done:
                         s = self._env.reset()
                     else:
@@ -78,7 +78,7 @@ class SAC(Agent):
                 eval_rewards = []
                 eval_G = []  # TODO: backed up returns
                 for _ in range(episode_len):
-                    a = self._policy_net(s)
+                    a = self.pred(s)
 
                     ns, r, done, _ = self._eval_env.step(s)
 
@@ -90,62 +90,68 @@ class SAC(Agent):
 
                 # TODO: log eval here
 
+    def _train_pred(self, state):
+        state = torch.from_numpy(state).float().to(torch_util.device)
+
+        with torch.no_grad():
+            return self._policy_net(state)[0].cpu().detach().numpy()
+
     def pred(self, state):
         with torch.no_grad():
-            return self.policy_net(state).max(1)[1].view(1, 1)
+            return self._eval_policy_net(state)[0].cpu().detach().numpy()
 
     def save(self, filepath):
         pass
 
-    @staticmethod
-    def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
-        hidden = [n_lay_nodes]*n_depth
 
-        obs_size = env.observation_space.shape[0]
-        act_size = env.action_space.shape[0]
+def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
+    hidden = [n_lay_nodes]*n_depth
 
-        q1_net = FlattenMlp(
-            hidden_sizes=hidden,
-            input_size=obs_size+act_size,
-            output_size=1,
-        ).to(device=torch_util.device)
+    obs_size = env.observation_space.shape[0]
+    act_size = env.action_space.shape[0]
 
-        q2_net = FlattenMlp(
-            hidden_sizes=hidden,
-            input_size=obs_size+act_size,
-            output_size=1,
-        ).to(device=torch_util.device)
+    q1_net = FlattenMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size+act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
 
-        policy_net = TanhGaussianPolicy(
-            hidden_sizes=hidden,
-            obs_dim=obs_size,
-            action_dim=act_size,
-        ).to(device=torch_util.device)
+    q2_net = FlattenMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size+act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
 
-        target_q1_net = FlattenMlp(
-            hidden_sizes=hidden,
-            input_size=obs_size + act_size,
-            output_size=1,
-        ).to(device=torch_util.device)
+    policy_net = TanhGaussianPolicy(
+        hidden_sizes=hidden,
+        obs_dim=obs_size,
+        action_dim=act_size,
+    ).to(device=torch_util.device)
 
-        target_q2_net = FlattenMlp(
-            hidden_sizes=hidden,
-            input_size=obs_size + act_size,
-            output_size=1,
-        ).to(device=torch_util.device)
+    target_q1_net = FlattenMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size + act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
 
-        nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
-        for n in nets:
-            for p in n.parameters():
-                p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
+    target_q2_net = FlattenMlp(
+        hidden_sizes=hidden,
+        input_size=obs_size + act_size,
+        output_size=1,
+    ).to(device=torch_util.device)
 
-        return dict(
-            policy_net=policy_net,
-            q1_net=q1_net,
-            q2_net=q2_net,
-            target_q1_net=target_q1_net,
-            target_q2_net=target_q2_net
-        )
+    nets = [q1_net, q2_net, policy_net, target_q1_net, target_q2_net]
+    for n in nets:
+        for p in n.parameters():
+            p.register_hook(lambda grad: torch.clamp(grad, -clip_val, clip_val))
+
+    return dict(
+        policy_net=policy_net,
+        q1_net=q1_net,
+        q2_net=q2_net,
+        target_q1_net=target_q1_net,
+        target_q2_net=target_q2_net
+    )
 
 
 def load(filepath):

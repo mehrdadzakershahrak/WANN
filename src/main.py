@@ -75,18 +75,17 @@ def run(config):
     eval_seed = random.choice(range(SEED_RANGE_MAX))+run_config.SEED
     eval_env.seed(eval_seed)
 
-    alg_params = AGENT_CONFIG['alg_params']
     if GAME_CONFIG.alg == task.ALG.SAC:
         if run_config.USE_PREV_EXPERIMENT:
             m = alg.load()  # TODO: load SAC model here
         else:
-            train_params = AGENT_CONFIG['train_params']
+            train_step_params = AGENT_CONFIG['train_step_params']
             nets = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
                                     AGENT_CONFIG['n_depth'],
                                     clip_val=AGENT_CONFIG['clip_val'])
 
             mem = alg.simple_mem(AGENT_CONFIG['mem_size'], env)
-            m = alg.SAC(env, eval_env, mem, nets, train_params, alg_params)
+            m = alg.SAC(env, eval_env, mem, nets, train_step_params)
     else:
         raise Exception(f'Algorithm configured is not currently supported')
 
@@ -104,8 +103,9 @@ def run(config):
             if i % LOG_INTERVAL == 0:
                 print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
 
+            learn_params = AGENT_CONFIG['learn_params']
             # TODO:  SAC learning / logging / checkpointing here
-            m.learn()
+            m.learn(**learn_params)
             m.save(ARTIFACTS_PATH+task.MODEL_ARTIFACT_FILENAME)
             print('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
         else:
