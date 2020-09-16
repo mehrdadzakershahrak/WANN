@@ -57,22 +57,22 @@ def get_task_config():
             clip_val=1,
             train_step_params=dict(
                 discount=0.99,
-                soft_target_tau=5e-3,
+                soft_target_tau=.01,
                 target_update_period=1,
-                policy_lr=1e-3,
-                qf_lr=1e-3,
+                policy_lr=3e-4,
+                qf_lr=3e-4,
                 reward_scale=1,
                 use_automatic_entropy_tuning=False,
-                target_entropy=.01
+                target_entropy=.2
             ),
             learn_params=dict(
                 train_epochs=3000,
                 batch_size=256,
-                episode_len=1600,
+                episode_len=1000,
                 eval_episode_len=1600,
-                start_steps=10,
-                n_train_steps=10,
-                eval_interval=10,
+                start_steps=1000,
+                n_train_steps=250,
+                eval_interval=100,
                 log_interval=10,
                 checkpoint_interval=1
             )

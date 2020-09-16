@@ -61,6 +61,7 @@ class SAC(Agent):
         artifact_path = results_path+f'artifact'
 
         # TODO: DRY ME UP
+        # TODO: use RAY Sampler for parallel simulation sampling
         s = self._env.reset()
         for _ in range(start_steps):
             a = self._env.action_space.sample()
@@ -75,11 +76,11 @@ class SAC(Agent):
 
         train_rt = Agent.results_tracker(id='train_performance')
         eval_rt = Agent.results_tracker(id='eval_performance')
-
         eval_called = False
         for i in range(train_epochs):
             s = self._env.reset()
-            # TODO: get policy loss
+
+            # TODO: track and log policy loss
 
             for _ in range(episode_len):
                 a = self.pred(s)
@@ -129,12 +130,14 @@ class SAC(Agent):
 
             if i % log_interval == 0:
                 self.log_performance(train_rt)
-                train_rt = Agent.results_tracker()
+                train_rt = Agent.results_tracker(id='train_performance')
 
                 if eval_called:
-                    self.log_performance(eval_rt)
-                    eval_rt = Agent.results_tracker()
+                    # self.log_performance(eval_rt)
+                    eval_rt = Agent.results_tracker(id='eval_performance')
                     eval_called = False
+
+            self.life_tracker['n_train_epochs'] += 1
 
     # TODO: change eval pred to deterministic
     def pred(self, state):
@@ -151,12 +154,12 @@ class SAC(Agent):
         net_fps = ['policy-net.pt', 'q1-net.pt', 'q2-net.pt',
                    'target-q1-net.pt', 'target-q2-net.pt']
         for i, fn in enumerate(net_fps):
-            torch.save(nets[i], f'{filepath}{fn}')
+            torch.save(nets[i], f'{filepath}{os.sep}{fn}')
 
         comps = [self._train_step_params]
         comp_fps = ['train-step-params.pkl']
         for i, fn in enumerate(comp_fps):
-            with open(f'{filepath}{fn}', 'wb') as f:
+            with open(f'{filepath}{os.sep}{fn}', 'wb') as f:
                 pickle.dump(comps[i], f)
 
 

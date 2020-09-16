@@ -34,10 +34,7 @@ class Agent(object):
             episode_max_rewards=results_tracker['episode_max_rewards'],
         )
         summary.update(self.life_tracker)
-
         log.info(summary)
-
-        print('test')
 
     @staticmethod
     def results_tracker(id):
