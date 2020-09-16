@@ -75,9 +75,10 @@ def run(config):
     eval_seed = random.choice(range(SEED_RANGE_MAX))+run_config.SEED
     eval_env.seed(eval_seed)
 
+    # TODO: save/load if on wann or SAC optimize step for prev experiment starts
     if GAME_CONFIG.alg == task.ALG.SAC:
         if run_config.USE_PREV_EXPERIMENT:
-            m = alg.load()  # TODO: load SAC model here
+            m = alg.load(run_config.PREV_EXPERIMENT_PATH)  # TODO: load SAC model here
         else:
             train_step_params = AGENT_CONFIG['train_step_params']
             nets = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
