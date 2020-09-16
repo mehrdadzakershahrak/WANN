@@ -37,15 +37,17 @@ class SAC(Agent):
 
     def _train_step(self, n_train_steps, batch_size):
         for _ in range(n_train_steps):
-            batch = self._replay.random_batch(batch_size)
+            batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
     def learn(self, **kwargs):
         episode_len = kwargs['episode_len']
+        eval_episode_len = kwargs['eval_episode_len']
         start_steps = kwargs['start_steps']
         n_train_steps = kwargs['n_train_steps']
         train_epochs = kwargs['train_epochs']
         eval_interval = kwargs['eval_interval']
+        batch_size = kwargs['batch_size']
 
         for i in range(train_epochs):
             s = self._env.reset()
@@ -60,7 +62,7 @@ class SAC(Agent):
                     if k == 0:
                         a = self._env.action_space.sample()
                     else:
-                        a = self._train_pred(s)
+                        a = self.pred(s)
 
                     ns, r, done, _ = self._env.step(a)
 
@@ -71,16 +73,16 @@ class SAC(Agent):
                     else:
                         s = ns
 
-            self._train_step(n_train_steps=n_train_steps)
+            self._train_step(n_train_steps, batch_size)
 
             if i % eval_interval == 0:
                 s = self._eval_env.reset()
                 eval_rewards = []
                 eval_G = []  # TODO: backed up returns
-                for _ in range(episode_len):
+                for _ in range(eval_episode_len):
                     a = self.pred(s)
 
-                    ns, r, done, _ = self._eval_env.step(s)
+                    ns, r, done, _ = self._eval_env.step(a)
 
                     eval_rewards.append(r)
                     if done:
@@ -90,15 +92,11 @@ class SAC(Agent):
 
                 # TODO: log eval here
 
-    def _train_pred(self, state):
+    # TODO: change eval pred to deterministic
+    def pred(self, state):
         state = torch.from_numpy(state).float().to(torch_util.device)
-
         with torch.no_grad():
             return self._policy_net(state)[0].cpu().detach().numpy()
-
-    def pred(self, state):
-        with torch.no_grad():
-            return self._eval_policy_net(state)[0].cpu().detach().numpy()
 
     def save(self, filepath):
         pass
