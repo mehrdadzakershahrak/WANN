@@ -96,7 +96,7 @@ class SAC(Agent):
                 if done:
                     s = self._env.reset()
                     self.life_tracker['total_n_train_episodes'] += 1
-                    train_rt['n_episodes_since_last_log'] += 1
+                    train_rt['n_train_episodes_since_last_log'] += 1
 
                     if self.life_tracker['total_n_train_episodes'] % log_interval == 0:
                         if self.life_tracker['total_n_train_episodes'] % eval_interval == 0:

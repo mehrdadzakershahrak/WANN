@@ -19,16 +19,25 @@ class Agent(object):
         self._mem = mem
 
     def log_performance(self, results_tracker):
-        rewards = np.array(results_tracker['rewards'])
-        n_episodes_since_last_log = results_tracker['n_episodes_since_last_log']
+        train_rewards = np.array(results_tracker['train_rewards'])
+        n_episodes_since_last_log = results_tracker['n_train_episodes_since_last_log']
         summary = dict(
             cur_mem_size=self._mem.num_steps_can_sample(),
-            episode_mean_rewards=rewards.mean(),
-            episode_min_rewards=rewards.min(),
-            episode_max_rewards=rewards.max(),
-            n_episodes_since_last_log=n_episodes_since_last_log
+            episode_train_mean_rewards=train_rewards.mean(),
+            episode_train_min_rewards=train_rewards.min(),
+            episode_train_max_rewards=train_rewards.max(),
+            n_train_episodes_since_last_log=n_episodes_since_last_log
         )
         summary.update(self.life_tracker)
+
+        eval_rewards = np.array(results_tracker['eval_rewards'])
+        if len(eval_rewards) > 0:
+            eval_summary = dict(
+                episode_eval_mean_rewards=eval_rewards.mean(),
+                episode_eval_min_rewards=eval_rewards.min(),
+                episode_eval_max_rewards=eval_rewards.max())
+            summary.update(eval_summary)
+
         log.info(summary)
 
         # TODO: csv logging including raw episodic rewards
