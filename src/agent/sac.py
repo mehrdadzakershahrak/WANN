@@ -5,6 +5,9 @@ from rlkit.torch.sac.policies import MakeDeterministic, TanhGaussianPolicy
 import torch
 import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
+import os
+import pickle
+
 
 if torch.cuda.is_available():
     torch_util.set_gpu_mode(True)
@@ -23,7 +26,7 @@ class SAC(Agent):
         self._target_q2_net = nets['policy_net'], nets['q1_net'], nets['q2_net'],\
                               nets['target_q1_net'], nets['target_q2_net']
 
-        self._eval_policy_net = MakeDeterministic(self._policy_net)
+        self._train_step_params = train_step_params
 
         self._alg = SACTrainer(
             env=self._env,
@@ -99,7 +102,21 @@ class SAC(Agent):
             return self._policy_net(state)[0].cpu().detach().numpy()
 
     def save(self, filepath):
-        pass
+        if not os.path.isdir(filepath):
+            os.makedirs(filepath)
+
+        nets = [self._policy_net, self._q1_net, self._q2_net,
+                self._target_q1_net, self._target_q2_net]
+        net_fps = ['policy-net.pt', 'q1-net.pt', 'q2-net.pt',
+                   'target-q1-net.pt', 'target-q2-net.pt']
+        for i, fn in enumerate(net_fps):
+            torch.save(nets[i], f'{filepath}{os.sep}{fn}')
+
+        comps = [self._mem, self._train_step_params]
+        comp_fps = ['mem.pkl', 'train-step-params.pkl']
+        for i, fn in enumerate(comp_fps):
+            with open(f'{filepath}{os.sep}{fn}', 'wb') as f:
+                pickle.dump(comps[i], f)
 
 
 def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
@@ -152,8 +169,28 @@ def vanilla_nets(env, n_lay_nodes, n_depth, clip_val=1):
     )
 
 
-def load(filepath):
-    pass
+def load(env, eval_env, filepath):
+    policy_net = torch.load(f'{filepath}{os.sep}policy-net.pt')
+    q1_net = torch.load(f'{filepath}{os.sep}q1-net.pt')
+    q2_net = torch.load(f'{filepath}{os.sep}q2-net.pt')
+    target_q1_net = torch.load(f'{filepath}{os.sep}target-q1-net.pt')
+    target_q2_net = torch.load(f'{filepath}{os.sep}target-q2-net.pt')
+
+    nets = dict(
+        policy_net=policy_net,
+        q1_net=q1_net,
+        q2_net=q2_net,
+        target_q1_net=target_q1_net,
+        target_q2_net=target_q2_net
+    )
+
+    with open(f'{filepath}{os.sep}mem.pkl', 'rb') as f:
+        mem = pickle.load(f)
+
+    with open(f'{filepath}{os.sep}train-step-params.pkl', 'rb') as f:
+        train_step_params = pickle.load(f)
+
+    return SAC(env, eval_env, mem, nets, train_step_params)
 
 
 def simple_mem(size, env):

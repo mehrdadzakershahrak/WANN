@@ -25,12 +25,13 @@ LOG_INTERVAL = 10
 
 def run(config):
     RESULTS_PATH = config['RESULTS_PATH']
-    ARTIFACTS_PATH = f'{RESULTS_PATH}artifact{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
-    VIS_RESULTS_PATH = f'{RESULTS_PATH}vis{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
-    SAVE_GIF_PATH = f'{RESULTS_PATH}gif{os.sep}'
-    TB_LOG_PATH = f'{RESULTS_PATH}tb-log{os.sep}{run_config.EXPERIMENT_ID}{os.sep}'
-    WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
-    RUN_CHECKPOINT = f'{RESULTS_PATH}_checkpoint{os.sep}'
+    EXPERIMENTS_PREFIX = f'{RESULTS_PATH}{run_config.EXPERIMENT_ID}{os.sep}'
+    ARTIFACTS_PATH = f'{EXPERIMENTS_PREFIX}artifact{os.sep}'
+    VIS_RESULTS_PATH = f'{EXPERIMENTS_PREFIX}vis{os.sep}'
+    SAVE_GIF_PATH = f'{EXPERIMENTS_PREFIX}gif{os.sep}'
+    TB_LOG_PATH = f'{EXPERIMENTS_PREFIX}tb-log{os.sep}'
+    WANN_OUT_PREFIX = f'{EXPERIMENTS_PREFIX}wann{os.sep}'
+    RUN_CHECKPOINT = f'{EXPERIMENTS_PREFIX}_checkpoint{os.sep}'
 
     NUM_WORKERS = config['NUM_WORKERS']
     WANN_ENV_ID = config['WANN_ENV_ID']
