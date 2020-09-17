@@ -63,19 +63,19 @@ def get_task_config():
                 qf_lr=3e-4,  # TODO: try 3e-3 and 1e-3
                 reward_scale=1.0,  # TODO: also try 5 for walker from literature
                 use_automatic_entropy_tuning=False,
-                target_entropy=-4,  # -n_actionspace
+                # target_entropy=-4,  # -n_actionspace
                 alpha=.2
             ),
             learn_params=dict(
-                n_episodes=3000,
-                train_batch_size=256,  # batch buffer size
+                n_episodes=300,
+                train_batch_size=100,  # batch buffer size
                 episode_len=1600,  # TODO offset 1k into this
                 eval_episode_len=1600,
-                start_steps=100,
+                start_steps=10,
                 n_trains_per_step=1,  # soft target updates should use 1, try 5 for hard target updates
                 eval_interval=100,
                 log_interval=10,
-                replay_sample_ratio=4,  # 4:1 or .25 replay buffer sample to gradient update ratio
+                replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
                 checkpoint_interval=1
             )
         ),

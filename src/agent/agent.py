@@ -9,7 +9,6 @@ class Agent(object):
     def __init__(self, env, eval_env, mem, nets, train_step_params):
         # TODO: add common interface for agents in future iteration
         self.life_tracker = dict(
-            total_n_train_epochs=int(1),
             total_n_train_batches=int(0),
             total_n_train_episodes=int(0),
             total_n_train_steps=int(0),

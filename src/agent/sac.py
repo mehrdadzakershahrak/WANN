@@ -81,10 +81,9 @@ class SAC(Agent):
         # TODO: use RAY Sampler for parallel simulation sampling
         train_rt = Agent.results_tracker(id='train_performance')
 
+        s = self._env.reset()
         # TODO: track and log policy loss
         for _ in range(n_episodes):
-            s = self._env.reset()
-
             for i in range(1, episode_len+1):
                 a = self.pred(s)
                 ns, r, done, _ = self._env.step(a)
@@ -98,9 +97,7 @@ class SAC(Agent):
 
                 if i % replay_sample_ratio == 0:
                     self._train_step(n_trains_per_step, batch_size)
-
-                self.life_tracker['total_n_train_batches'] += batch_size
-                self.life_tracker['total_n_train_epochs'] += 1
+                self.life_tracker['total_n_train_batches'] += 1
 
                 if i % checkpoint_interval == 0:
                     self.save(artifact_path)
