@@ -49,52 +49,61 @@ class SAC(Agent):
             batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
-    def learn(self, results_path, **kwargs):
+    def learn(self, results_path, seed_mem=True, **kwargs):
+        n_episodes = kwargs['n_episodes']
         episode_len = kwargs['episode_len']
         eval_episode_len = kwargs['eval_episode_len']
         start_steps = kwargs['start_steps']
         n_train_steps = kwargs['n_train_steps']
-        train_epochs = kwargs['train_epochs']
         eval_interval = kwargs['eval_interval']
-        batch_size = kwargs['batch_size']
+        batch_size = kwargs['train_batch_size']
         checkpoint_interval = kwargs['checkpoint_interval']
         log_interval = kwargs['log_interval']
         artifact_path = results_path+f'artifact'
 
         # TODO: log summary of current config
 
-        s = self._env.reset()
-        for k in range(start_steps):
-            a = self._env.action_space.sample()
-            ns, r, done, _ = self._env.step(a)
+        if seed_mem:
+            s = self._env.reset()
+            for k in range(start_steps):
+                a = self._env.action_space.sample()
+                ns, r, done, _ = self._env.step(a)
 
-            self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
-                                 terminal=1 if done else 0, env_info=dict())
-            if done:
-                s = self._env.reset()
-            else:
-                s = ns
+                self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
+                                     terminal=1 if done else 0, env_info=dict())
+                if done:
+                    s = self._env.reset()
+                else:
+                    s = ns
 
-        # TODO: DRY ME UP
         # TODO: use RAY Sampler for parallel simulation sampling
         train_rt = Agent.results_tracker(id='train_performance')
-        for i in range(train_epochs):
+
+        # TODO: track and log policy loss
+        for i in range(n_episodes):
             s = self._env.reset()
 
-            # TODO: track and log policy loss
-
-            for _ in range(episode_len):
+            for k in range(episode_len):
                 a = self.pred(s)
                 ns, r, done, _ = self._env.step(a)
 
                 self.life_tracker['total_n_train_steps'] += 1
                 train_rt['train_interval_timesteps'] += 1
-                train_rt['train_rewards'].append(r)
 
+                train_rt['train_rewards'].append(r)
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
                                      terminal=1 if done else 0, env_info=dict())
+                self._train_step(n_train_steps, batch_size)
+
+                self.life_tracker['total_n_train_batches'] += batch_size
+                self.life_tracker['total_n_train_epochs'] += 1
+
+                if i % checkpoint_interval == 0:
+                    self.save(artifact_path)
+
                 if done or k == episode_len-1:
                     s = self._env.reset()
+
                     self.life_tracker['total_n_train_episodes'] += 1
                     train_rt['n_train_episodes_since_last_log'] += 1
 
@@ -108,7 +117,7 @@ class SAC(Agent):
                                 a = self.pred(s)
 
                                 ns, r, done, _ = self._eval_env.step(a)
-                                train_rt['eval_rewards'].append(r)  # TODO: fix rewards tracking
+                                train_rt['eval_rewards'].append(r)
 
                                 if done:
                                     s = self._eval_env.reset()
@@ -119,14 +128,6 @@ class SAC(Agent):
                         train_rt = Agent.results_tracker(id='train_performance')
                 else:
                     s = ns
-
-            self._train_step(n_train_steps, batch_size)
-            self.life_tracker['total_n_train_batches'] += batch_size
-
-            if i % checkpoint_interval == 0:
-                self.save(artifact_path)
-
-            self.life_tracker['total_n_train_epochs'] += 1
 
     def pred(self, state, deterministic=False):
         state = torch.from_numpy(state).float().to(torch_util.device)
