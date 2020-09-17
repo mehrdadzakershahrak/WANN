@@ -3,7 +3,7 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 1000
+VERSION_NUM = 2
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
@@ -16,7 +16,7 @@ TRAIN_WANN = False
 USE_WANN = False
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = True
-NUM_TRAIN_STEPS = 1000
+NUM_TRAIN_STEPS = 1003
 ############################################
 
 performance_log_path = f'result{os.sep}{EXPERIMENT_ID}{os.sep}log{os.sep}alg-step{os.sep}'

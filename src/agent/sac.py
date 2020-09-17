@@ -8,6 +8,7 @@ from agent.mem import Mem
 import os
 import pickle
 import config as run_config
+from rlkit.envs.wrappers import NormalizedBoxEnv
 import numpy as np
 
 
@@ -62,10 +63,8 @@ class SAC(Agent):
 
         # TODO: log summary of current config
 
-        # TODO: DRY ME UP
-        # TODO: use RAY Sampler for parallel simulation sampling
         s = self._env.reset()
-        for _ in range(start_steps):
+        for k in range(start_steps):
             a = self._env.action_space.sample()
             ns, r, done, _ = self._env.step(a)
 
@@ -76,6 +75,8 @@ class SAC(Agent):
             else:
                 s = ns
 
+        # TODO: DRY ME UP
+        # TODO: use RAY Sampler for parallel simulation sampling
         train_rt = Agent.results_tracker(id='train_performance')
         for i in range(train_epochs):
             s = self._env.reset()
@@ -84,7 +85,6 @@ class SAC(Agent):
 
             for _ in range(episode_len):
                 a = self.pred(s)
-
                 ns, r, done, _ = self._env.step(a)
 
                 self.life_tracker['total_n_train_steps'] += 1
@@ -93,7 +93,7 @@ class SAC(Agent):
 
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
                                      terminal=1 if done else 0, env_info=dict())
-                if done:
+                if done or k == episode_len-1:
                     s = self._env.reset()
                     self.life_tracker['total_n_train_episodes'] += 1
                     train_rt['n_train_episodes_since_last_log'] += 1
