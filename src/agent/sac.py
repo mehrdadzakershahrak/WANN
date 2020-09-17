@@ -1,15 +1,13 @@
 from agent.agent import Agent  # TODO better naming here
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.networks import FlattenMlp
-from rlkit.torch.sac.policies import MakeDeterministic, TanhGaussianPolicy
+from rlkit.torch.sac.policies import TanhGaussianPolicy
 import torch
 import rlkit.torch.pytorch_util as torch_util
 from agent.mem import Mem
 import os
 import pickle
 import config as run_config
-from rlkit.envs.wrappers import NormalizedBoxEnv
-import numpy as np
 
 
 if torch.cuda.is_available():
@@ -45,11 +43,15 @@ class SAC(Agent):
         )
 
     def _train_step(self, n_train_steps, batch_size):
+        if self._mem < batch_size:
+            return
+
         for _ in range(n_train_steps):
             batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
     def learn(self, results_path, seed_mem=True, **kwargs):
+        replay_sample_ratio = kwargs['replay_sample_ratio']
         n_episodes = kwargs['n_episodes']
         episode_len = kwargs['episode_len']
         eval_episode_len = kwargs['eval_episode_len']
@@ -80,10 +82,10 @@ class SAC(Agent):
         train_rt = Agent.results_tracker(id='train_performance')
 
         # TODO: track and log policy loss
-        for i in range(n_episodes):
+        for _ in range(n_episodes):
             s = self._env.reset()
 
-            for k in range(episode_len):
+            for i in range(1, episode_len+1):
                 a = self.pred(s)
                 ns, r, done, _ = self._env.step(a)
 
@@ -93,7 +95,9 @@ class SAC(Agent):
                 train_rt['train_rewards'].append(r)
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
                                      terminal=1 if done else 0, env_info=dict())
-                self._train_step(n_train_steps, batch_size)
+
+                if i % replay_sample_ratio == 0:
+                    self._train_step(n_train_steps, batch_size)
 
                 self.life_tracker['total_n_train_batches'] += batch_size
                 self.life_tracker['total_n_train_epochs'] += 1
@@ -101,7 +105,7 @@ class SAC(Agent):
                 if i % checkpoint_interval == 0:
                     self.save(artifact_path)
 
-                if done or k == episode_len-1:
+                if done or i == episode_len:
                     s = self._env.reset()
 
                     self.life_tracker['total_n_train_episodes'] += 1
