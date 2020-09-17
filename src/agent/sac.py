@@ -97,7 +97,7 @@ class SAC(Agent):
 
                 if i % replay_sample_ratio == 0:
                     self._train_step(n_trains_per_step, batch_size)
-                self.life_tracker['total_n_train_batches'] += 1
+                    self.life_tracker['total_n_train_batches'] += 1
 
                 if i % checkpoint_interval == 0:
                     self.save(artifact_path)
