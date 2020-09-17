@@ -43,7 +43,7 @@ class SAC(Agent):
         )
 
     def _train_step(self, n_train_steps, batch_size):
-        if self._mem < batch_size:
+        if self._mem.num_steps_can_sample() < batch_size:
             return
 
         for _ in range(n_train_steps):
@@ -56,7 +56,7 @@ class SAC(Agent):
         episode_len = kwargs['episode_len']
         eval_episode_len = kwargs['eval_episode_len']
         start_steps = kwargs['start_steps']
-        n_train_steps = kwargs['n_train_steps']
+        n_trains_per_step = kwargs['n_trains_per_step']
         eval_interval = kwargs['eval_interval']
         batch_size = kwargs['train_batch_size']
         checkpoint_interval = kwargs['checkpoint_interval']
@@ -97,7 +97,7 @@ class SAC(Agent):
                                      terminal=1 if done else 0, env_info=dict())
 
                 if i % replay_sample_ratio == 0:
-                    self._train_step(n_train_steps, batch_size)
+                    self._train_step(n_trains_per_step, batch_size)
 
                 self.life_tracker['total_n_train_batches'] += batch_size
                 self.life_tracker['total_n_train_epochs'] += 1
