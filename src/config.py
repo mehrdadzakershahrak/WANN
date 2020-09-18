@@ -3,7 +3,7 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 4
+VERSION_NUM = 8
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION

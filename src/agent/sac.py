@@ -42,17 +42,17 @@ class SAC(Agent):
             **train_step_params
         )
 
-    def _train_step(self, n_train_steps, batch_size):
+    def _train_step(self, n_trains_per_step, batch_size):
         if self._mem.num_steps_can_sample() < batch_size:
             return
 
-        for _ in range(n_train_steps):
+        for _ in range(n_trains_per_step):
             batch = self._mem.random_batch(batch_size)
             self._alg.train(batch)
 
     def learn(self, results_path, seed_mem=True, **kwargs):
         replay_sample_ratio = kwargs['replay_sample_ratio']
-        n_episodes = kwargs['n_episodes']
+        n_epochs = kwargs['n_epochs']
         episode_len = kwargs['episode_len']
         eval_episode_len = kwargs['eval_episode_len']
         start_steps = kwargs['start_steps']
@@ -83,17 +83,17 @@ class SAC(Agent):
 
         s = self._env.reset()
         # TODO: track and log policy loss
-        for _ in range(n_episodes):
+        for _ in range(n_epochs):
             for i in range(1, episode_len+1):
                 a = self.pred(s)
                 ns, r, done, _ = self._env.step(a)
 
                 self.life_tracker['total_n_train_steps'] += 1
                 train_rt['train_interval_timesteps'] += 1
-
                 train_rt['train_rewards'].append(r)
+
                 self._mem.add_sample(observation=s, action=a, reward=r, next_observation=ns,
-                                     terminal=1 if done else 0, env_info=dict())
+                                     terminal=1.0 if done else 0.0, env_info=dict())
 
                 if i % replay_sample_ratio == 0:
                     self._train_step(n_trains_per_step, batch_size)
@@ -102,7 +102,7 @@ class SAC(Agent):
                 if i % checkpoint_interval == 0:
                     self.save(artifact_path)
 
-                if done or i == episode_len:
+                if done:
                     s = self._env.reset()
 
                     self.life_tracker['total_n_train_episodes'] += 1
