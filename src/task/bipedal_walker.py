@@ -51,32 +51,32 @@ def get_task_config():
                   'lidar_5','lidar_6','lidar_7','lidar_8','lidar_9',
                   'hip_1','knee_1','hip_2','knee_2']),
         AGENT=dict(
-            mem_size=int(1E6),
-            n_hidden=256,
-            n_depth=2,
-            clip_val=1.0,
-            train_step_params=dict(
-                discount=0.99,
-                soft_target_tau=1e-2,  # TODO: also try 5e-3 from the literature
-                target_update_period=1,
-                policy_lr=1e-4,  # TODO: try 3e-3 and 1e-3
-                qf_lr=1e-4,  # TODO: try 3e-3 and 1e-3
-                reward_scale=1.0,  # TODO: also try 5 for walker from literature
-                use_automatic_entropy_tuning=False,
-                # target_entropy=-4,  # -n_actionspace
-                alpha=.2
-            ),
             learn_params=dict(
-                n_epochs=300,
+                gamma=0.99,
+                tau=5e-3,  # TODO: also try 5e-3 from the literature
+                learn_rate=1e-4,
+                mem_size=int(1E6),
+                target_entropy='auto',
+                # n_hidden=256,
+                # n_depth=2,
+                # clip_val=1.0,
+                # alpha=.2,
+                # n_epochs=300,
+                # policy_lr=1e-4,  # TODO: try 3e-3 and 1e-3
+                # qf_lr=1e-4,  # TODO: try 3e-3 and 1e-3
+                # reward_scale=1.0,  # TODO: also try 5 for walker from literature
+                timesteps=4200, # 420000
                 train_batch_size=100,  # batch buffer size
-                episode_len=2000,  # TODO offset 1k into this
-                eval_episode_len=1600,
-                start_steps=10000,
+                episode_len=-1,  # entire episode length
+                eval_episode_len=-1,
+                alg_checkpoint_interval=2000,
+                start_steps=100,
                 n_trains_per_step=1,  # soft target updates should use 1, try 5 for hard target updates
-                eval_interval=100,
+                gradient_steps_per_step=1,
+                eval_interval=1000,
                 log_interval=10,
+                log_verbose=1,
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
-                checkpoint_interval=1
             )
         ),
         ENTRY_POINT='task.bipedal_walker:_env',

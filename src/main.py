@@ -1,6 +1,7 @@
 from task import cartpole, bipedal_walker
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
+from stable_baselines3 import SAC
 import gym
 import os
 import extern.wann.vis as wann_vis
@@ -13,7 +14,10 @@ import sys
 from mpi4py import MPI
 import random
 import subprocess
-from agent import sac as alg
+from stable_baselines3.sac import MlpPolicy
+import os
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, EvalCallback
 
 comm = MPI.COMM_WORLD
 rank = 0
@@ -34,8 +38,8 @@ def run(config):
     VIS_RESULTS_PATH = f'{EXPERIMENTS_PREFIX}vis{os.sep}'
     SAVE_GIF_PATH = f'{EXPERIMENTS_PREFIX}gif{os.sep}'
     TB_LOG_PATH = f'{EXPERIMENTS_PREFIX}tb-log{os.sep}'
-    WANN_OUT_PREFIX = f'{EXPERIMENTS_PREFIX}wann{os.sep}'
-    RUN_CHECKPOINT = f'{EXPERIMENTS_PREFIX}_checkpoint{os.sep}'
+    WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
+    ALG_OUT_PREFIX = f'{ARTIFACTS_PATH}alg{os.sep}'
 
     NUM_WORKERS = config['NUM_WORKERS']
     WANN_ENV_ID = config['WANN_ENV_ID']
@@ -43,9 +47,18 @@ def run(config):
     GAME_CONFIG = config['GAME_CONFIG']
     AGENT_CONFIG = config['AGENT']
 
-    # TODO: logger init here
+    log.info('RUN ALG CONFIG:')
+    log.info(AGENT_CONFIG)
+    log.info('RUN WANN CONFIG:')
+    log.info(GAME_CONFIG)
 
-    paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX, RUN_CHECKPOINT]
+    log.info('Experiment description:')
+    log.info(run_config.DESCRIPTION)
+
+    paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, TB_LOG_PATH, WANN_OUT_PREFIX,
+             f'{ALG_OUT_PREFIX}log{os.sep}checkpoint{os.sep}checkpoint-alg{os.sep}',
+             f'{ALG_OUT_PREFIX}log{os.sep}checkpoint{os.sep}best-alg{os.sep}eval-alg-best',
+             f'{ALG_OUT_PREFIX}log{os.sep}eval_checkpoint{os.sep}alg{os.sep}eval-log']
     for p in paths:
         if not os.path.isdir(p):
             os.makedirs(p)
@@ -80,19 +93,30 @@ def run(config):
     eval_seed = random.choice(range(SEED_RANGE_MAX))+run_config.SEED
     eval_env.seed(eval_seed)
 
+    learn_params = AGENT_CONFIG['learn_params']
     # TODO: save/load if on wann or SAC optimize step for prev experiment starts
     if GAME_CONFIG.alg == task.ALG.SAC:
-        mem = alg.simple_mem(AGENT_CONFIG['mem_size'], env)
-
+        env = Monitor(gym.make('BipedalWalker-v3'), f'{ALG_OUT_PREFIX}log')
+        checkpoint_callback = CheckpointCallback(save_freq=learn_params['alg_checkpoint_interval'],
+                                                 save_path=f'{ALG_OUT_PREFIX}log{os.sep}checkpoint{os.sep}checkpoint-alg{os.sep}eval-alg-best')
+        eval_env = gym.make('BipedalWalker-v3')
+        eval_callback = EvalCallback(eval_env,
+                                     best_model_save_path=f'{ALG_OUT_PREFIX}log{os.sep}checkpoint{os.sep}best-alg{os.sep}eval-alg-best',
+                                     log_path=f'{ALG_OUT_PREFIX}log{os.sep}eval-checkpoint',
+                                     eval_freq=learn_params['eval_interval'])
+        cb = CallbackList([checkpoint_callback, eval_callback])
         if run_config.USE_PREV_EXPERIMENT:
-            m = alg.load(env, eval_env, mem, ARTIFACTS_PATH)  # TODO: load SAC model here
+            m = SAC.load(f'{run_config.PREV_EXPERIMENT_PATH}{os.sep}alg')  # TODO: load SAC model here
         else:
-            train_step_params = AGENT_CONFIG['train_step_params']
-            nets = alg.vanilla_nets(env, AGENT_CONFIG['n_hidden'],
-                                    AGENT_CONFIG['n_depth'],
-                                    clip_val=AGENT_CONFIG['clip_val'])
-
-            m = alg.SAC(env, eval_env, mem, nets, train_step_params)
+            # TODO: CNN agent
+            m = SAC(MlpPolicy, env, verbose=learn_params['log_verbose'],
+                    tensorboard_log=f'{ALG_OUT_PREFIX}log{os.sep}tb-log',
+                    buffer_size=learn_params['mem_size'], learning_rate=learn_params['learn_rate'],
+                    learning_starts=learn_params['start_steps'], batch_size=learn_params['train_batch_size'],
+                    tau=learn_params['tau'], gamma=learn_params['gamma'], train_freq=learn_params['n_trains_per_step'],
+                    target_update_interval=learn_params['replay_sample_ratio'],
+                    gradient_steps=learn_params['gradient_steps_per_step'],
+                    n_episodes_rollout=learn_params['episode_len'], target_entropy=learn_params['target_entropy'])
     else:
         raise Exception(f'Algorithm configured is not currently supported')
 
@@ -103,22 +127,22 @@ def run(config):
     for i in range(1, run_config.NUM_TRAIN_STEPS+1):
         if run_config.TRAIN_WANN:
             # TODO: get critic and pass to wann here
-            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.START_FROM_LAST_RUN else False,
+            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.PREV_EXPERIMENT_PATH else False,
                        run_train=True)
 
         if rank == 0:  # if main process
             if i % LOG_INTERVAL == 0:
-                print(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
-
-            learn_params = AGENT_CONFIG['learn_params']
+                log.info(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
             # TODO:  SAC learning / logging / checkpointing here
-            m.learn(EXPERIMENTS_PREFIX, **learn_params)
-            print('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
+            m.learn(total_timesteps=learn_params['timesteps'], log_interval=learn_params['log_interval'],
+                    callback=cb)
+            m.save(f'{ALG_OUT_PREFIX}log{os.sep}full-run-checkpoint{os.sep}checkpoint-step-{i}')
+            log.info('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
         else:
             break  # break if subprocess
 
         if i % LOG_INTERVAL == 0:
-            print(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
+            log.info(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
 
     if rank == 0:  # if main process
         if run_config.RENDER_TEST_GIFS:

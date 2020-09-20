@@ -125,7 +125,7 @@ class GymTask():
       annOut = act(wVec, aVec, self.nInput, self.nOutput, state) 
       action = selectAct(annOut,self.actSelect)
 
-      # TODO: replace emulator step with critic eval from SAC here
+      # TODO: replace emulator step with critic eval from SAC here+
 
       # with tf.device('/cpu:0'):
       #   action, state = self.agent.predict(annOut)

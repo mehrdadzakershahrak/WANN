@@ -3,7 +3,7 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 8
+VERSION_NUM = 1
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
@@ -12,12 +12,26 @@ TASK = 'bipedal-walker'
 EXPERIMENT_ID = f'without-wann-sac-bipedalwalker-v3-{VERSION_NUM}'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
+PREV_EXPERIMENT_PATH = 'prev-run'
 TRAIN_WANN = False
 USE_WANN = False
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = True
-NUM_TRAIN_STEPS = 1003
+NUM_TRAIN_STEPS = 3000
+DESCRIPTION = '''
+    In this experiment we are...
+'''
 ############################################
+
+# TODO: DRY THIS UP
+track_run_configs = dict(
+    SEED=SEED,
+    TASK=TASK,
+    EXPERIMENT_ID=EXPERIMENT_ID,
+    TRAIN_WANN=TRAIN_WANN,
+    USE_WANN=USE_WANN,
+    NUM_TRAIN_STEPS=NUM_TRAIN_STEPS
+)
 
 performance_log_path = f'result{os.sep}{EXPERIMENT_ID}{os.sep}log{os.sep}alg-step{os.sep}'
 if not os.path.isdir(performance_log_path):
@@ -26,12 +40,6 @@ if not os.path.isdir(performance_log_path):
 logging.config.dictConfig(
     dict(
         version=1,
-        formatters=dict(
-            jsonformat={
-                'class': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-                'format': '%(message)s'
-            },
-        ),
         handlers=dict(
             file={
                 'class': 'logging.FileHandler',
@@ -43,6 +51,12 @@ logging.config.dictConfig(
                 'class': 'logging.StreamHandler',
                 'formatter': 'jsonformat'
             }
+        ),
+        formatters=dict(
+            jsonformat={
+                'class': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+                'format': '%(message)s'
+            },
         ),
         loggers={
             '': {
@@ -56,19 +70,16 @@ logging.config.dictConfig(
 
 configure(
     processors=[
-        stdlib.add_logger_name,
-        stdlib.add_log_level,
-        stdlib.filter_by_level,
         processors.TimeStamper(fmt='iso'),
-        stdlib.PositionalArgumentsFormatter(),
-        processors.StackInfoRenderer(),
-        stdlib.render_to_log_kwargs,
         processors.format_exc_info,
-        processors.UnicodeDecoder()
+        processors.StackInfoRenderer(),
+        stdlib.filter_by_level,
+        processors.UnicodeDecoder(),
+        stdlib.render_to_log_kwargs
     ],
-    wrapper_class=stdlib.BoundLogger,
     context_class=threadlocal.wrap_dict(dict),
-    logger_factory=stdlib.LoggerFactory()
+    logger_factory=stdlib.LoggerFactory(),
+    wrapper_class=stdlib.BoundLogger
 )
 
 
