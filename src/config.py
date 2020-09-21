@@ -9,7 +9,7 @@ VERSION_NUM = 1
 # DEFAULT CONFIGURATION
 ############################################
 TASK = 'bipedal-walker'
-EXPERIMENT_ID = f'without-wann-sac-bipedalwalker-v3-{VERSION_NUM}'
+EXPERIMENT_ID = f'wann-sac-bipedalwalker-v3-{VERSION_NUM}'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 PREV_EXPERIMENT_PATH = 'prev-run'

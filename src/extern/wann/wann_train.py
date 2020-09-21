@@ -279,9 +279,8 @@ def run(args, alg_critic, kill_slaves=False, use_checkpoint=False):
   updateHyp(hyp, games)
 
   if (rank == 0):
-    log.info('PERFORMING WANN TRAINING STEP...')
+    log.info('PERFORMING WANN TRAINING STEP')
     master()
-    log.info('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
     slave()
     exit(0)

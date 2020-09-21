@@ -2,6 +2,10 @@ import os
 import numpy as np
 import copy
 from .ann import exportNet
+import config as run_config
+
+log = run_config.log()
+
 
 class WannDataGatherer():
   ''' Data recorder for WANN algorithm'''
@@ -77,9 +81,19 @@ class WannDataGatherer():
     # ------------------------------------------------------------------------ 
 
   def display(self):
-    return    "|---| Elite Fit: " + '{:.2f}'.format(self.fit_max[-1]) \
-         + " \t|---| Best Fit:  "  + '{:.2f}'.format(self.fit_top[-1]) \
-         + " \t|---| Peak Fit:  "  + '{:.2f}'.format(self.fit_peak[-1])
+    elite_fit, best_fit, peak_fit = self.fit_max[-1], self.fit_top[-1], self.fit_peak[-1]
+
+    wann_step_res = dict(
+      id='wann_step_results',
+      elite_fit=elite_fit,
+      best_fit=best_fit,
+      peak_fit=peak_fit
+    )
+    log.info(wann_step_res)
+
+    return    "|---| Elite Fit: " + '{:.2f}'.format(elite_fit) \
+         + " \t|---| Best Fit:  "  + '{:.2f}'.format(best_fit) \
+         + " \t|---| Peak Fit:  "  + '{:.2f}'.format(peak_fit)
 
   def save(self, gen=(-1), saveFullPop=False):
     ''' Save data to disk '''
@@ -125,8 +139,3 @@ class WannDataGatherer():
 
 def lsave(filename, data):
   np.savetxt(filename, data, delimiter=',',fmt='%1.2e')
-
-
-
-
-

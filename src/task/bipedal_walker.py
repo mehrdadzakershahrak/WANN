@@ -66,7 +66,7 @@ def get_task_config():
                 # policy_lr=1e-4,  # TODO: try 3e-3 and 1e-3
                 # qf_lr=1e-4,  # TODO: try 3e-3 and 1e-3
                 # reward_scale=1.0,  # TODO: also try 5 for walker from literature
-                timesteps=3200,  # episode length is 1600 e.g. x 10 = 16000 timesteps Example SAC full run to converge: 420000
+                timesteps=6400,  # episode length is 1600 e.g. x 10 = 16000 timesteps Example SAC full run to converge: 420000
                 train_batch_size=100,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,

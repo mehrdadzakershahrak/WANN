@@ -134,11 +134,10 @@ def run(config):
 
             if i % LOG_INTERVAL == 0:
                 log.info(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
-            # TODO:  SAC learning / logging / checkpointing here
+            log.info('PERFORMING ALG TRAIN STEP')
             alg.learn(total_timesteps=learn_params['timesteps'], log_interval=learn_params['log_interval'],
                     callback=cb)
             alg.save(f'{ALG_OUT_PREFIX}checkpoint{os.sep}full-run-checkpoint{os.sep}checkpoint-step-{i}')
-            log.info('TRAINING ALG STEP COMPLETE')  # TODO: add proper logging
         else:
             break  # break if subprocess
 
