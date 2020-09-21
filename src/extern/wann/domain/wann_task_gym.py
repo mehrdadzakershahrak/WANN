@@ -9,8 +9,7 @@ from extern.wann.neat_src import *
 class WannGymTask(GymTask):
   """Problem domain to be solved by neural network. Uses OpenAI Gym patterns.
   """ 
-  def __init__(self, game, paramOnly=False, nReps=1, agent_params=None,
-               agent_env=None):
+  def __init__(self, game, paramOnly=False, nReps=1):
     """Initializes task environment
   
     Args:
@@ -21,7 +20,7 @@ class WannGymTask(GymTask):
       nReps     - (nReps) - number of trials to get average fitness
     """
 
-    GymTask.__init__(self, game, paramOnly, nReps, agent_params, agent_env)
+    GymTask.__init__(self, game, paramOnly, nReps)
 
 
 # -- 'Weight Agnostic Network' evaluation -------------------------------- -- #
@@ -73,12 +72,13 @@ class WannGymTask(GymTask):
     if nRep is False:
       nRep = hyp['alg_nReps']
 
+    alg_critic = hyp['alg_critic']
+
     # Set weight values to test WANN with
     if (hyp['alg_wDist'] == "standard") and nVals==6: # Double, constant, and half signal 
       wVals = np.array((-2,-1.0,-0.5,0.5,1.0,2))
     else:
       wVals = np.linspace(-self.absWCap, self.absWCap ,nVals)
-
 
     # Get reward from 'reps' rollouts -- test population on same seeds
     reward = np.empty((nRep,nVals))
@@ -86,9 +86,9 @@ class WannGymTask(GymTask):
       for iVal in range(nVals):
         wMat = self.setWeights(wVec,wVals[iVal])
         if seed == -1:
-          reward[iRep,iVal] = self.testInd(wMat, aVec, seed=seed,view=view)
+          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, seed=seed,view=view)
         else:
-          reward[iRep,iVal] = self.testInd(wMat, aVec, seed=seed+iRep,view=view)
+          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, seed=seed+iRep,view=view)
           
     if returnVals is True:
       return np.mean(reward,axis=0), wVals

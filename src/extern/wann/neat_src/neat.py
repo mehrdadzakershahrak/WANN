@@ -167,8 +167,7 @@ def updateHyp(hyp, games):
   """Overwrites default hyperparameters with those from second .json file
   """
   # Task hyper parameters
-  task = GymTask(games[hyp['task']], paramOnly=True, agent_params=hyp['agent_params'],
-                 agent_env=hyp['agent_env'])
+  task = GymTask(games[hyp['task']], paramOnly=True)
   hyp['ann_nInput'] = task.nInput
   hyp['ann_nOutput'] = task.nOutput
   hyp['ann_initAct'] = task.activations[0]

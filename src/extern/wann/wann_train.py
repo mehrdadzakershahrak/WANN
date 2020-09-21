@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pickle
+import config as run_config
 
 # MPI
 from mpi4py import MPI
@@ -10,6 +11,10 @@ comm = MPI.COMM_WORLD
 from extern.wann.neat_src import * # NEAT and WANNs
 from extern.wann.domain import *   # Task environments
 
+import cloudpickle
+from collections import defaultdict
+
+log = run_config.log()
 games = None
 
 _ALG_CHECKPOINT_PATH=f'_checkpoint{os.sep}'
@@ -36,9 +41,14 @@ def master():
   else:
     alg = Wann(hyp)
 
-  for gen in range(hyp['maxGen']):        
-    pop = alg.ask()            # Get newly evolved individuals from NEAT  
-    reward = batchMpiEval(pop)  # Send pop to be evaluated by workers
+  for gen in range(hyp['maxGen']):
+    if gen > 0:
+      alg_critic = None
+    else:
+      alg_critic = hyp['alg_critic']
+
+    pop = alg.ask()            # Get newly evolved individuals from NEAT
+    reward = batchMpiEval(pop, alg_critic=alg_critic)  # Send pop to be evaluated by workers
     alg.tell(reward)           # Send fitness to NEAT    
 
     data = gatherData(data,alg,gen,hyp)
@@ -116,7 +126,7 @@ def checkBest(data):
 
 
 # -- Parallelization ----------------------------------------------------- -- #
-def batchMpiEval(pop, sameSeedForEachIndividual=True):
+def batchMpiEval(pop, alg_critic=None, sameSeedForEachIndividual=True):
   """Sends population to workers for evaluation one batch at a time.
 
   Args:
@@ -138,14 +148,19 @@ def batchMpiEval(pop, sameSeedForEachIndividual=True):
   nJobs = len(pop)
   nBatch= math.ceil(nJobs/nSlave) # First worker is master
 
-    # Set same seed for each individual
+  # Set same seed for each individual
   if sameSeedForEachIndividual is False:
     seed = np.random.randint(1000, size=nJobs)
   else:
     seed = np.random.randint(1000)
 
+  if alg_critic is not None:
+    msg = cloudpickle.dumps(alg_critic)
+
   reward = np.empty( (nJobs,hyp['alg_nVals']), dtype=np.float64)
   i = 0 # Index of fitness we are filling
+
+  update_critic = defaultdict(lambda: True)
   for iBatch in range(nBatch): # Send one batch of individuals
     for iWork in range(nSlave): # (one to each worker if there)
       if i < nJobs:
@@ -153,6 +168,14 @@ def batchMpiEval(pop, sameSeedForEachIndividual=True):
         n_wVec = np.shape(wVec)[0]
         aVec   = pop[i].aVec.flatten()
         n_aVec = np.shape(aVec)[0]
+
+        if alg_critic is not None and update_critic[iWork]:
+          comm.send(1, dest=(iWork)+1, tag=7)
+          comm.send(len(msg), dest=(iWork)+1, tag=6)
+          comm.Send(msg, dest=(iWork) + 1, tag=6)
+          update_critic[iWork] = False
+        else:
+          comm.send(0, dest=(iWork) + 1, tag=7)
 
         comm.send(n_wVec, dest=(iWork)+1, tag=1)
         comm.Send(  wVec, dest=(iWork)+1, tag=2)
@@ -193,11 +216,22 @@ def slave():
   PseudoReturn (sent to master):
     result - (float)    - fitness value of network
   """
-  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'], agent_params=agent_params,
-                     agent_env=agent_env)
+  global hyp
+
+  task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'])
+
   while True:
     # Evaluate any weight vectors sent this way
     # while True:
+    update_critic = True if comm.recv(source=0, tag=7) == 1 else False
+    if update_critic:
+      n_alg_critic = comm.recv(source=0, tag=6)
+      if n_alg_critic > 0:
+        alg_critic = np.empty(n_alg_critic, dtype='d')
+        comm.Recv(alg_critic, source=0, tag=6)
+        alg_critic = cloudpickle.loads(alg_critic)
+        hyp['alg_critic'] = alg_critic
+
     n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
     if n_wVec > 0:
       wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
@@ -226,32 +260,28 @@ def stopAllWorkers():
 # -- Input Parsing ------------------------------------------------------- -- #
 
 
-def run(args, kill_slaves=False, use_checkpoint=False, run_train=True):
+def run(args, alg_critic, kill_slaves=False, use_checkpoint=False):
   if kill_slaves:
     stopAllWorkers()
     return
 
-  global fileName, hyp, agent_params, agent_env, rank, nWorker # Used by both master and slave processes
+  global fileName, hyp, rank, nWorker # Used by both master and slave processes
   fileName    = args['outPrefix']
   hyp  = args['hyperparam']
 
   # TODO: clean this up HACK
-  hyp['agent_params'] = args['agent_params']
-  hyp['agent_env'] = args['agent_env']
   hyp['use_checkpoint'] = use_checkpoint
+  hyp['alg_critic'] = alg_critic
 
-  agent_params = args['agent_params']
-  agent_env = args['agent_env']
   rank = args['rank']
-  nWorker = args['nWorker']
+  nWorker = args['num_workers']
 
   updateHyp(hyp, games)
 
   if (rank == 0):
-    if run_train:
-      print('PERFORMING WANN TRAINING STEP...')
-      master()
-      print('PERFORMING WANN TRAINING STEP COMPLETE')
+    log.info('PERFORMING WANN TRAINING STEP...')
+    master()
+    log.info('PERFORMING WANN TRAINING STEP COMPLETE')
   else:
     slave()
     exit(0)

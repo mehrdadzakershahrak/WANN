@@ -33,8 +33,6 @@ class GymTask():
     # TODO: clean this up
     # HACK
 
-    self.alg      = game.alg
-
     # Environment
     self.nReps = nReps
     self.maxEpisodeLength = game.max_episode_length
@@ -73,7 +71,7 @@ class GymTask():
     fitness = np.mean(reward)
     return fitness
 
-  def testInd(self, wVec, aVec, hyp=None, view=False,seed=-1):
+  def testInd(self, wVec, aVec, alg_critic, view=False,seed=-1):
     """Evaluate individual on task
     Args:
       wVec    - (np_array) - weight matrix as a flattened vector
@@ -93,21 +91,12 @@ class GymTask():
       np.random.seed(seed)
       self.env.seed(seed)
 
-    #TODO: get latest critic
-
     state = self.env.reset()
     self.env.t = 0
     annOut = act(wVec, aVec, self.nInput, self.nOutput, state)
     action = selectAct(annOut, self.actSelect)
 
     # TODO: replace emulator step with critic eval from SAC here
-
-    # with tf.device('/cpu:0'):
-    #   action, state = self.agent.predict(annOut)
-    #   action = np.array(action)[0]
-
-    # previous prediction:
-    # action = selectAct(annOut,self.actSelect)
 
     state, reward, done, info = self.env.step(action)
     
@@ -120,19 +109,25 @@ class GymTask():
       return reward
     else:
       totalReward = reward
-    
-    for tStep in range(self.maxEpisodeLength): 
+
+    if alg_critic is None:
+      n_episodes = self.maxEpisodeLength
+    else:
+      n_episodes = 200 # TODO: make n_boostrap steps config driven
+
+    G = 0.0
+    rewards = []
+    for tStep in range(n_episodes):
       annOut = act(wVec, aVec, self.nInput, self.nOutput, state) 
       action = selectAct(annOut,self.actSelect)
 
-      # TODO: replace emulator step with critic eval from SAC here+
-
-      # with tf.device('/cpu:0'):
-      #   action, state = self.agent.predict(annOut)
-      #   action = np.array(action)[0]
-
       state, reward, done, info = self.env.step(action)
-      totalReward += reward  
+      if tStep == self.maxEpisodeLength-1 and not done:
+        if alg_critic is not None:
+          G = alg_critic(state, action)
+        break
+      else:
+        rewards.append(reward)
       if view:
         if self.needsClosed:
           self.env.render(close=done)  
@@ -141,4 +136,8 @@ class GymTask():
       if done:
         break
 
-    return totalReward
+    # TODO: compute discounted return here
+    rewards = np.array(rewards)
+    rewards = np.sum(rewards)+G
+
+    return rewards

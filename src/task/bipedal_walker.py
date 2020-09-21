@@ -12,7 +12,7 @@ import config
 # TODO: add generated date timestamp for unique experiment id cycled by x experiments
 # EXPERIMENT_ID = 'wann-bipedalwalker2-v2'
 ENV_NAME = 'BipedalWalker-v3'
-WANN_OUT_PREFIX = f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}wann{os.sep}'
+WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}artifact{os.sep}wann{os.sep}'
 
 
 def get_task_config():
@@ -40,8 +40,9 @@ def get_task_config():
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=1600,
-                  alg=task.ALG.SAC,
+                  max_episode_length=1600,  # n_step_boostrap - total episode length 1600
+                  n_critic_bootstrap=200,
+                  alg_type=task.ALG.SAC,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                   in_out_labels=[
                   'hull_angle','hull_vel_angle','vel_x','vel_y',
@@ -65,15 +66,15 @@ def get_task_config():
                 # policy_lr=1e-4,  # TODO: try 3e-3 and 1e-3
                 # qf_lr=1e-4,  # TODO: try 3e-3 and 1e-3
                 # reward_scale=1.0,  # TODO: also try 5 for walker from literature
-                timesteps=4200, # 420000
+                timesteps=3200,  # episode length is 1600 e.g. x 10 = 16000 timesteps Example SAC full run to converge: 420000
                 train_batch_size=100,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,
-                alg_checkpoint_interval=2000,
+                alg_checkpoint_interval=1000,
                 start_steps=100,
                 n_trains_per_step=1,  # soft target updates should use 1, try 5 for hard target updates
                 gradient_steps_per_step=1,
-                eval_interval=1000,
+                eval_interval=2000,
                 log_interval=10,
                 log_verbose=1,
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio

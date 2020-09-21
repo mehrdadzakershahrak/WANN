@@ -14,7 +14,8 @@ class ALG(enum.Enum):
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
                            'o_act', 'weightCap', 'noise_bias', 'output_noise',
-                           'max_episode_length', 'alg', 'artifacts_path', 'in_out_labels'])
+                           'max_episode_length', 'n_critic_bootstrap',
+                           'alg_type', 'artifacts_path', 'in_out_labels'])
 
 _DEFAULT_WANN_HYPERPARAMS = {
     "task": None,
