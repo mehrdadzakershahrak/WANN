@@ -73,6 +73,7 @@ class WannGymTask(GymTask):
       nRep = hyp['alg_nReps']
 
     alg_critic = hyp['alg_critic']
+    mem = hyp['mem']
 
     # Set weight values to test WANN with
     if (hyp['alg_wDist'] == "standard") and nVals==6: # Double, constant, and half signal 
@@ -86,9 +87,9 @@ class WannGymTask(GymTask):
       for iVal in range(nVals):
         wMat = self.setWeights(wVec,wVals[iVal])
         if seed == -1:
-          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, seed=seed,view=view)
+          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, mem=mem, seed=seed,view=view)
         else:
-          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, seed=seed+iRep,view=view)
+          reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic, mem=mem, seed=seed+iRep,view=view)
           
     if returnVals is True:
       return np.mean(reward,axis=0), wVals

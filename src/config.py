@@ -3,7 +3,7 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 1
+VERSION_NUM = 18
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
@@ -16,10 +16,13 @@ PREV_EXPERIMENT_PATH = 'prev-run'
 TRAIN_WANN = True
 USE_WANN = True
 VISUALIZE_WANN = False
-RENDER_TEST_GIFS = True
-NUM_TRAIN_STEPS = 3000
+RENDER_TEST_GIFS = False
+NUM_TRAIN_STEPS = 500
 DESCRIPTION = '''
-    In this experiment we are...
+    This experiment implements WANN with the SAC critic sampled from the replay buffer    
+    
+    increasing internal layers to 256 for WANN
+    
 '''
 ############################################
 

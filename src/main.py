@@ -46,10 +46,10 @@ def run(config):
     GAME_CONFIG = config['GAME_CONFIG']
     AGENT_CONFIG = config['AGENT']
 
-    log.info('RUN ALG CONFIG:')
-    log.info(AGENT_CONFIG)
-    log.info('RUN WANN CONFIG:')
-    log.info(GAME_CONFIG)
+    log.info('RUN CONFIG:')
+    log.info(config)
+
+
 
     log.info('Experiment description:')
     log.info(run_config.DESCRIPTION)
@@ -71,8 +71,6 @@ def run(config):
     # Use MPI if parallel
     if run_config.TRAIN_WANN:
         if "parent" == mpi_fork(NUM_WORKERS+1): os._exit(0)
-    else:
-        raise Exception(f'Algorithm configured is not currently supported')
 
     wann_param_config = config['WANN_PARAM_CONFIG']
     wann_args = dict(
@@ -86,9 +84,9 @@ def run(config):
     alg = None
     for i in range(1, run_config.NUM_TRAIN_STEPS+1):
         if run_config.TRAIN_WANN:
-            # TODO: get critic and pass to wann here
             wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.USE_PREV_EXPERIMENT else False,
-                       alg_critic=None if alg is None else alg.critic)
+                       alg_critic=None if alg is None else alg.critic,
+                       mem=None if alg is None else alg.replay_buffer)
 
         if rank == 0:  # if main process
             if i <= 1:
@@ -128,6 +126,8 @@ def run(config):
                                   gradient_steps=learn_params['gradient_steps_per_step'],
                                   n_episodes_rollout=learn_params['episode_len'],
                                   target_entropy=learn_params['target_entropy'])
+                else:
+                    raise Exception(f'Algorithm configured is not currently supported')
 
             if i > 1:
                 alg.learning_starts = 0
@@ -136,7 +136,7 @@ def run(config):
                 log.info(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
             log.info('PERFORMING ALG TRAIN STEP')
             alg.learn(total_timesteps=learn_params['timesteps'], log_interval=learn_params['log_interval'],
-                    callback=cb)
+                      callback=cb)
             alg.save(f'{ALG_OUT_PREFIX}checkpoint{os.sep}full-run-checkpoint{os.sep}checkpoint-step-{i}')
         else:
             break  # break if subprocess
@@ -206,7 +206,6 @@ def render_agent(model, env_name, vid_len,
                                 [np.array(img) for i, image in enumerate(images) if i % 2 == 0], fps=30)
 
 
-# TODO: proper logging
 def main():
     if run_config.TASK in ['cartpole-balance']:
         run(cartpole.get_task_config())
