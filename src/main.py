@@ -1,4 +1,4 @@
-from task import cartpole, bipedal_walker
+from task import lunar_lander, bipedal_walker
 from extern.wann import wann_train as wtrain
 from extern.wann.neat_src import ann as wnet
 from stable_baselines3 import SAC
@@ -48,8 +48,6 @@ def run(config):
 
     log.info('RUN CONFIG:')
     log.info(config)
-
-
 
     log.info('Experiment description:')
     log.info(run_config.DESCRIPTION)
@@ -125,7 +123,8 @@ def run(config):
                                   target_update_interval=learn_params['replay_sample_ratio'],
                                   gradient_steps=learn_params['gradient_steps_per_step'],
                                   n_episodes_rollout=learn_params['episode_len'],
-                                  target_entropy=learn_params['target_entropy'])
+                                  target_entropy=learn_params['target_entropy'],
+                                  device=config['DEVICE'])
                 else:
                     raise Exception(f'Algorithm configured is not currently supported')
 
@@ -208,7 +207,9 @@ def render_agent(model, env_name, vid_len,
 
 def main():
     if run_config.TASK in ['cartpole-balance']:
-        run(cartpole.get_task_config())
+        pass
+    if run_config.TASK in ['lunar-lander']:
+        run(bipedal_walker.get_task_config())
     if run_config.TASK in ['bipedal-walker']:
         run(bipedal_walker.get_task_config())
     else:

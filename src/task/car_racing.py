@@ -26,7 +26,7 @@ def get_task_config():
     wann_param_config['alg_nReps'] = 1
 
     task_config = dict(
-        WANN_ENV_ID='wann-halfcheetah-v1',
+        WANN_ENV_ID='wann-carracing-v1',
         NUM_WORKERS=mp.cpu_count(),
         GAME_CONFIG=task.Game(env_name='RoboschoolHalfCheetah-v1',
                   actionSelect='all',  # all, soft, hard

@@ -3,26 +3,25 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 18
+VERSION_NUM = 9
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
 ############################################
-TASK = 'bipedal-walker'
-EXPERIMENT_ID = f'wann-sac-bipedalwalker-v3-{VERSION_NUM}'
+TASK = 'lunar-lander'
+EXPERIMENT_ID = f'no-wann-sac-lunarlander-v2-{VERSION_NUM}'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 PREV_EXPERIMENT_PATH = 'prev-run'
-TRAIN_WANN = True
-USE_WANN = True
+TRAIN_WANN = False
+USE_WANN = False
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = False
-NUM_TRAIN_STEPS = 500
+NUM_TRAIN_STEPS = 1
 DESCRIPTION = '''
     This experiment implements WANN with the SAC critic sampled from the replay buffer    
     
-    increasing internal layers to 256 for WANN
-    
+    lunar lander baselines 1/10
 '''
 ############################################
 

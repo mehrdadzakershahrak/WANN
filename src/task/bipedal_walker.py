@@ -27,7 +27,8 @@ def get_task_config():
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3', # THIS IS ACTUALLY DIFFERENT THAT EXPERIMENT ID DUE TO GEN X EXPERIMENT CYCLES
-        NUM_WORKERS=15,  # mp.cpu_count()
+        NUM_WORKERS=5,  # mp.cpu_count()
+        DEVICE='cuda:0',
         GAME_CONFIG=task.Game(env_name='BipedalWalker-v3',
                   actionSelect='all',  # all, soft, hard
                   input_size=24,
@@ -58,12 +59,12 @@ def get_task_config():
                 learn_rate=1e-4,
                 mem_size=int(1e6),
                 target_entropy='auto',
-                timesteps=1600,
-                train_batch_size=1024,  # batch buffer size
+                timesteps=850000,
+                train_batch_size=100,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,
                 alg_checkpoint_interval=500,
-                start_steps=1024,
+                start_steps=100,
                 n_trains_per_step=1,  # soft target updates should use 1, try 5 for hard target updates
                 gradient_steps_per_step=1,
                 eval_interval=1500,
