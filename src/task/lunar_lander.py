@@ -11,18 +11,15 @@ WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}artifact{os
 
 
 def get_task_config():
-    setup_env = gym.make(ENV_NAME)
-    setup_obs = setup_env.reset()
-
     wann_param_config = task.get_default_wann_hyperparams()
     wann_param_config['task'] = ENV_NAME
-    wann_param_config['maxGen'] = 5  # TODO: 20 - 4 steps
-    wann_param_config['popSize'] = 20  # TODO: 64 - 5 steps
+    wann_param_config['maxGen'] = 1
+    wann_param_config['popSize'] = 50
     wann_param_config['alg_nReps'] = 1
 
     task_config = dict(
         WANN_ENV_ID='wann-lunarlandercontinuous-v2',
-        NUM_WORKERS=mp.cpu_count(),
+        NUM_WORKERS=5,
         DEVICE='cuda:1',
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
                   actionSelect='all',  # all, soft, hard
@@ -62,14 +59,11 @@ def get_task_config():
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
             )
         ),
-        ENTRY_POINT='task.bipedal_walker:_env',
+        ENTRY_POINT='task.lunar_lander:_env',
         WANN_PARAM_CONFIG=wann_param_config,
         VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH
     )
-
-    del setup_env
-    del setup_obs
 
     return copy.deepcopy(task_config)
 

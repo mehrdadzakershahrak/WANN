@@ -3,18 +3,18 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 9
+VERSION_NUM = 5
 
 # GLOBAL CONFIGURABLE PARAMETERS
 # DEFAULT CONFIGURATION
 ############################################
 TASK = 'lunar-lander'
-EXPERIMENT_ID = f'no-wann-sac-lunarlander-v2-{VERSION_NUM}'
+EXPERIMENT_ID = f'wann-sac-lunarlander-v2-{VERSION_NUM}'
 SEED = 0  # high level seed for all experiments
 USE_PREV_EXPERIMENT = False
 PREV_EXPERIMENT_PATH = 'prev-run'
-TRAIN_WANN = False
-USE_WANN = False
+TRAIN_WANN = True
+USE_WANN = True
 VISUALIZE_WANN = False
 RENDER_TEST_GIFS = False
 NUM_TRAIN_STEPS = 1

@@ -14,7 +14,6 @@ import sys
 from mpi4py import MPI
 import random
 import subprocess
-from stable_baselines3.sac import MlpPolicy
 import os
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, EvalCallback
@@ -113,7 +112,7 @@ def run(config):
                         alg = SAC.load(f'{run_config.PREV_EXPERIMENT_PATH}{os.sep}alg')  # TODO: load SAC model here
                     else:
                         # TODO: CNN agent
-                        alg = SAC(MlpPolicy, env, verbose=learn_params['log_verbose'],
+                        alg = SAC(AGENT_CONFIG['policy'], env, verbose=learn_params['log_verbose'],
                                   tensorboard_log=f'{EXPERIMENTS_PREFIX}log{os.sep}tb-log',
                                   buffer_size=learn_params['mem_size'], learning_rate=learn_params['learn_rate'],
                                   learning_starts=learn_params['start_steps'],
@@ -212,6 +211,14 @@ def main():
         run(bipedal_walker.get_task_config())
     if run_config.TASK in ['bipedal-walker']:
         run(bipedal_walker.get_task_config())
+    if run_config.TASK in ['car-racing']:
+        pass
+    if run_config.TASK in ['half-cheetah']:
+        pass
+    if run_config.TASK in ['ant']:
+        pass
+    if run_config.TASK in ['humanoid']:
+        pass
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 

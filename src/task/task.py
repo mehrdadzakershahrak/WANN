@@ -11,6 +11,14 @@ class ALG(enum.Enum):
     SAC = 1
 
 
+class POLICY(enum.Enum):
+    MLP = 1
+    CNN = 2
+    LSTM = 3
+    LSTMCNN = 4
+    CUSTOM = 5
+
+
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
                            'o_act', 'weightCap', 'noise_bias', 'output_noise',
@@ -46,12 +54,16 @@ MODEL_ARTIFACT_FILENAME = 'primary-model'
 
 
 class ObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, champion_artifacts_path):
+    def __init__(self, env, champion_artifacts_path, datprep):
         super().__init__(env)
 
+        self.datprep = datprep
         self.wVec, self.aVec, _ = wnet.importNet(champion_artifacts_path)
 
     def observation(self, obs):
+        if self.datprep is not None:
+            obs = self.datprep(obs)
+
         if config.USE_WANN:
             obs = wnet.act(self.wVec, self.aVec,
                            nInput=obs.shape[0],
