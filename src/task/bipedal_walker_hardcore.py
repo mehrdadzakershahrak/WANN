@@ -30,11 +30,11 @@ def get_task_config():
                               layers=[40, 40],
                               i_act=np.full(24, 1),
                               h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                              o_act=np.full(4, 1),
+                              o_act=np.full(24, 1),
                               weightCap=2.0,
                               noise_bias=0.0,
                               output_noise=[False, False, False],
-                              max_episode_length=500,  # n_step_boostrap - total episode length 1600
+                              max_episode_length=600,
                               n_critic_bootstrap=5,
                               alg_type=task.ALG.SAC,
                               artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
@@ -68,9 +68,9 @@ def get_task_config():
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
             )
         ),
-        ENTRY_POINT='task.bipedal_walker:_env',
+        ENTRY_POINT='task.bipedal_walker_hardcore:_env',
         WANN_PARAM_CONFIG=wann_param_config,
-        VIDEO_LENGTH=1600,
+        VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH
     )
 

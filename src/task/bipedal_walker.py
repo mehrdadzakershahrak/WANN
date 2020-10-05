@@ -22,7 +22,7 @@ def get_task_config():
         WANN_ENV_ID='wann-bipedalwalker-v3',
         NUM_WORKERS=5,
         DEVICE='cuda:0',
-        GAME_CONFIG=task.Game(env_name='BipedalWalker-v3',
+        GAME_CONFIG=task.Game(env_name=ENV_NAME,
                               actionSelect='all',  # OPTIONS: soft, all, hard
                               input_size=24,
                               output_size=24,
@@ -70,7 +70,7 @@ def get_task_config():
         ),
         ENTRY_POINT='task.bipedal_walker:_env',
         WANN_PARAM_CONFIG=wann_param_config,
-        VIDEO_LENGTH=1600,
+        VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH
     )
 

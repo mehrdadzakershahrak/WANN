@@ -24,16 +24,16 @@ def get_task_config():
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
                   actionSelect='all',  # all, soft, hard
                   input_size=8,
-                  output_size=2,
+                  output_size=8,
                   time_factor=0,
                   layers=[24, 24],
-                  i_act=np.full(24,1),
+                  i_act=np.full(8,1),
                   h_act=[1,2,3,4,5,6,7,8,9,10],
-                  o_act=np.full(24,1),
+                  o_act=np.full(8,1),
                   weightCap=2.0,
                   noise_bias=0.0,
                   output_noise=[False, False, False],
-                  max_episode_length=200,  # n_step_boostrap - total episode length 1600
+                  max_episode_length=100,  # n_step_boostrap - total episode length 1600
                   n_critic_bootstrap=5,
                   alg_type=task.ALG.SAC,
                   artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
@@ -45,7 +45,7 @@ def get_task_config():
                 learn_rate=1e-4,
                 mem_size=int(1E6),
                 target_entropy='auto',
-                timesteps=int(2e7),  # try 200 with WANN
+                timesteps=200,
                 train_batch_size=100,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,

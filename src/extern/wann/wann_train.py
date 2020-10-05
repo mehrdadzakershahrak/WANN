@@ -292,7 +292,7 @@ def stopAllWorkers():
 # -- Input Parsing ------------------------------------------------------- -- #
 
 
-def run(args, alg_critic, mem, kill_slaves=False, use_checkpoint=False):
+def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False):
   if kill_slaves:
     stopAllWorkers()
     return

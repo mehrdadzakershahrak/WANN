@@ -11,14 +11,6 @@ class ALG(enum.Enum):
     SAC = 1
 
 
-class POLICY(enum.Enum):
-    MLP = 1
-    CNN = 2
-    LSTM = 3
-    LSTMCNN = 4
-    CUSTOM = 5
-
-
 Game = namedtuple('Game', ['env_name', 'time_factor', 'actionSelect',
                            'input_size', 'output_size', 'layers', 'i_act', 'h_act',
                            'o_act', 'weightCap', 'noise_bias', 'output_noise',

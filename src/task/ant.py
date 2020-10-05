@@ -4,10 +4,10 @@ import copy
 from task import task
 import os
 import config
-from stable_baselines3.sac import CnnPolicy
+from stable_baselines3.sac import MlpPolicy
 
 # TODO: add yml config binding
-ENV_NAME = 'CarRacing-v0'
+ENV_NAME = 'AntPyBulletEnv-v0'
 WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}artifact{os.sep}wann{os.sep}'
 
 
@@ -19,35 +19,36 @@ def get_task_config():
     wann_param_config['alg_nReps'] = 1
 
     task_config = dict(
-        WANN_ENV_ID='wann-carracing-v0',
-        NUM_WORKERS=5,  # mp.cpu_count() for all cores
+        WANN_ENV_ID='wann-ant-v0',
+        NUM_WORKERS=5,
+        DEVICE='cuda:0',
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
-                              actionSelect='all',  # all, soft, hard
-                              input_size=36864,  # greyscale + 4 frame stacking
-                              output_size=36864,
+                              actionSelect='all',  # OPTIONS: soft, all, hard
+                              input_size=28,
+                              output_size=28,
                               time_factor=0,
                               layers=[40, 40],
-                              i_act=np.full(36864, 1),
+                              i_act=np.full(28, 1),
                               h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                              o_act=np.full(36864, 1),
+                              o_act=np.full(28, 1),
                               weightCap=2.0,
                               noise_bias=0.0,
                               output_noise=[False, False, False],
-                              max_episode_length=500,  # use full episode length or reasonable trajectory len here
+                              max_episode_length=500,
                               n_critic_bootstrap=5,
                               alg_type=task.ALG.SAC,
                               artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
                               in_out_labels=[]),
         AGENT=dict(
             datprep=None,
-            policy=CnnPolicy,
+            policy=MlpPolicy,
             learn_params=dict(
                 gamma=0.99,
                 tau=5e-3,
                 learn_rate=1e-4,
-                mem_size=int(1E6),
+                mem_size=int(1e6),
                 target_entropy='auto',
-                timesteps=1200,  # for baseline SAC give enough timesteps to be at least 500 episodes
+                timesteps=1000,
                 train_batch_size=100,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,
@@ -58,10 +59,10 @@ def get_task_config():
                 eval_interval=1500,
                 log_interval=10,
                 log_verbose=1,
-                replay_sample_ratio=1,  # 1:1 or 4:1 for 1e6 replay mem size
+                replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
             )
         ),
-        ENTRY_POINT='task.car_racing:_env',
+        ENTRY_POINT='task.ant:_env',
         WANN_PARAM_CONFIG=wann_param_config,
         VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH

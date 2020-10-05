@@ -1,18 +1,13 @@
 from task import lunar_lander, bipedal_walker
 from extern.wann import wann_train as wtrain
-from extern.wann.neat_src import ann as wnet
 from stable_baselines3 import SAC
 import gym
-import os
-import extern.wann.vis as wann_vis
-import matplotlib.pyplot as plt
 from task import task
 import imageio
 import numpy as np
 import config as run_config
 import sys
 from mpi4py import MPI
-import random
 import subprocess
 import os
 from stable_baselines3.common.monitor import Monitor
@@ -38,10 +33,8 @@ def run(config):
     SAVE_GIF_PATH = f'{EXPERIMENTS_PREFIX}gif{os.sep}'
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
     ALG_OUT_PREFIX = f'{ARTIFACTS_PATH}alg{os.sep}'
-
     NUM_WORKERS = config['NUM_WORKERS']
     WANN_ENV_ID = config['WANN_ENV_ID']
-
     GAME_CONFIG = config['GAME_CONFIG']
     AGENT_CONFIG = config['AGENT']
 
@@ -65,9 +58,8 @@ def run(config):
 
     wtrain.init_games_config(games)
 
-    # Use MPI if parallel
     if run_config.TRAIN_WANN:
-        if "parent" == mpi_fork(NUM_WORKERS+1): os._exit(0)
+        if "parent" == mpi_fork(NUM_WORKERS + 1): os._exit(0)
 
     wann_param_config = config['WANN_PARAM_CONFIG']
     wann_args = dict(
@@ -79,13 +71,13 @@ def run(config):
     )
 
     alg = None
-    for i in range(1, run_config.NUM_TRAIN_STEPS+1):
+    for i in range(1, run_config.NUM_TRAIN_STEPS + 1):
         if run_config.TRAIN_WANN:
             wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.USE_PREV_EXPERIMENT else False,
                        alg_critic=None if alg is None else alg.critic,
                        mem=None if alg is None else alg.replay_buffer)
 
-        if rank == 0:  # if main process
+        if rank == 0:  # main proc
             if i <= 1:
                 gym.envs.register(
                     id=WANN_ENV_ID,
@@ -111,7 +103,6 @@ def run(config):
                     if run_config.USE_PREV_EXPERIMENT:
                         alg = SAC.load(f'{run_config.PREV_EXPERIMENT_PATH}{os.sep}alg')  # TODO: load SAC model here
                     else:
-                        # TODO: CNN agent
                         alg = SAC(AGENT_CONFIG['policy'], env, verbose=learn_params['log_verbose'],
                                   tensorboard_log=f'{EXPERIMENTS_PREFIX}log{os.sep}tb-log',
                                   buffer_size=learn_params['mem_size'], learning_rate=learn_params['learn_rate'],
@@ -150,35 +141,31 @@ def run(config):
             render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
             render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
-    wtrain.run({}, kill_slaves=True)
+    wtrain.run(None, kill_slaves=True)
 
 
 def mpi_fork(n):
-  """Re-launches the current script with workers
-  Returns "parent" for original parent, "child" for MPI children
-  (from https://github.com/garymcintire/mpi_util/)
-  """
-  if n<=1:
-    return "child"
-  if os.getenv("IN_MPI") is None:
-    env = os.environ.copy()
-    env.update(
-      MKL_NUM_THREADS="1",
-      OMP_NUM_THREADS="1",
-      IN_MPI="1"
-    )
+    if n <= 1:
+        return "child"
+    if os.getenv("IN_MPI") is None:
+        env = os.environ.copy()
+        env.update(
+            MKL_NUM_THREADS="1",
+            OMP_NUM_THREADS="1",
+            IN_MPI="1"
+        )
 
-    # TODO: check if linux or windows here
-    # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
-    # ADDED local mod to work with Win 10
-    subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
+        # TODO: check if linux or windows here
+        # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
+        # ADDED local mod to work with Win 10
+        subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
 
-    return "parent"
-  else:
-    global nWorker, rank
-    nWorker = comm.Get_size()
-    rank = comm.Get_rank()
-    return "child"
+        return "parent"
+    else:
+        global nWorker, rank
+        nWorker = comm.Get_size()
+        rank = comm.Get_rank()
+        return "child"
 
 
 def render_agent(model, env_name, vid_len,
