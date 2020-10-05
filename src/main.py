@@ -1,4 +1,5 @@
-from task import lunar_lander, bipedal_walker
+from task import lunar_lander, bipedal_walker, ant, bipedal_walker_hardcore, car_racing, \
+    cartpole, half_cheetah, humanoid, lunar_lander
 from extern.wann import wann_train as wtrain
 from stable_baselines3 import SAC
 import gym
@@ -192,20 +193,20 @@ def render_agent(model, env_name, vid_len,
 
 
 def main():
-    if run_config.TASK in ['cartpole-balance']:
-        pass
+    if run_config.TASK in ['cartpole']:
+        run(cartpole.get_task_config())
     if run_config.TASK in ['lunar-lander']:
-        run(bipedal_walker.get_task_config())
+        run(lunar_lander.get_task_config())
     if run_config.TASK in ['bipedal-walker']:
         run(bipedal_walker.get_task_config())
     if run_config.TASK in ['car-racing']:
-        pass
+        run(car_racing.get_task_config())
     if run_config.TASK in ['half-cheetah']:
-        pass
+        run(half_cheetah.get_task_config())
     if run_config.TASK in ['ant']:
-        pass
+        run(ant.get_task_config())
     if run_config.TASK in ['humanoid']:
-        pass
+        run(humanoid.get_task_config())
     else:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 
