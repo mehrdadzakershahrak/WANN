@@ -4,15 +4,17 @@ import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
 VERSION_NUM = 1
+EXPERIMENT_ID = f'wann-test-{VERSION_NUM}'  # TODO: DRY ME UP
+USE_WANN = True # TODO: DRY ME UP
 
 run_config = dict(
     TASK='lunar-lander',
-    EXPERIMENT_ID=f'wann-test-{VERSION_NUM}',
+    EXPERIMENT_ID=EXPERIMENT_ID,
     SEED=0,  # high level seed for all experiments
     USE_PREV_EXPERIMENT=False,
     PREV_EXPERIMENT_PATH='prev-run',
     TRAIN_WANN=True,
-    USE_WANN=True,
+    USE_WANN=USE_WANN,
     VISUALIZE_WANN=False,
     RENDER_TEST_GIFS=False,
     NUM_EPOCHS=1,

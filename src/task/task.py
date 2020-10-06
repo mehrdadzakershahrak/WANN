@@ -43,6 +43,13 @@ _DEFAULT_WANN_HYPERPARAMS = {
 
 RESULTS_PATH = f'result{os.sep}'
 MODEL_ARTIFACT_FILENAME = 'primary-model'
+WANN_OUT_PREFIX = None
+
+
+def set_wann_out_prefix(prefix):
+    global WANN_OUT_PREFIX
+
+    WANN_OUT_PREFIX = prefix
 
 
 class ObsWrapper(gym.ObservationWrapper):

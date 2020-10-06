@@ -8,7 +8,6 @@ from stable_baselines3.sac import MlpPolicy
 
 # TODO: add yml config binding
 ENV_NAME = 'HumanoidPyBulletEnv-v0'
-WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}artifact{os.sep}wann{os.sep}'
 
 
 def get_task_config():
@@ -71,7 +70,16 @@ def get_task_config():
     return copy.deepcopy(task_config)
 
 
+def set_wann_out_prefix(prefix):
+    global WANN_OUT_PREFIX
+
+    WANN_OUT_PREFIX = prefix
+
+
 def _env():
+    if task.WANN_OUT_PREFIX is None:
+        raise Exception('WANN out prefix was not set')
+
     env = task.ObsWrapper(gym.make(ENV_NAME),
-                          champion_artifacts_path=f'{WANN_OUT_PREFIX}_best.out')
+                          champion_artifacts_path=f'{task.WANN_OUT_PREFIX}_best.out')
     return env

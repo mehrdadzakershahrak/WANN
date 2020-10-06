@@ -196,16 +196,20 @@ def render_agent(model, env_name, vid_len,
 def main():
     task_labels = ['cartpole', 'lunar-lander', 'bipedal-walker', 'car-racing', 'half-cheetah',
                    'ant', 'humanoid']
-    tasks = [cartpole.get_task_config(), lunar_lander.get_task_config(), bipedal_walker.get_task_config(),
-             car_racing.get_task_config(), half_cheetah.get_task_config(), ant.get_task_config(),
-             humanoid.get_task_config()]
+    tasks = [cartpole, lunar_lander, bipedal_walker,
+            car_racing, half_cheetah, ant, humanoid]
     run_config = default_config.run_config
 
     task_found = False
     for i, t in enumerate(task_labels):
         if run_config['TASK'] == t:
-            config = tasks[i].extend(run_config)
+            t = tasks[i]
+            config = t.get_task_config()
+            config.update(run_config)
+
+            task.set_wann_out_prefix(f'{task.RESULTS_PATH}{config["EXPERIMENT_ID"]}{os.sep}artifact{os.sep}wann{os.sep}')
             run(config)
+
             task_found = True
             break
 
