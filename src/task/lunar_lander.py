@@ -1,10 +1,10 @@
-import multiprocessing as mp
 import gym
 import numpy as np
 import copy
 from task import task
 import os
 import config
+from stable_baselines3.sac import MlpPolicy
 
 ENV_NAME = 'LunarLanderContinuous-v2'
 WANN_OUT_PREFIX = f'{task.RESULTS_PATH}{config.EXPERIMENT_ID}{os.sep}artifact{os.sep}wann{os.sep}'
@@ -22,23 +22,25 @@ def get_task_config():
         NUM_WORKERS=5,
         DEVICE='cuda:1',
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
-                  actionSelect='all',  # all, soft, hard
-                  input_size=8,
-                  output_size=8,
-                  time_factor=0,
-                  layers=[24, 24],
-                  i_act=np.full(8,1),
-                  h_act=[1,2,3,4,5,6,7,8,9,10],
-                  o_act=np.full(8,1),
-                  weightCap=2.0,
-                  noise_bias=0.0,
-                  output_noise=[False, False, False],
-                  max_episode_length=100,  # n_step_boostrap - total episode length 1600
-                  n_critic_bootstrap=5,
-                  alg_type=task.ALG.SAC,
-                  artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
-                  in_out_labels=[]),
+                              actionSelect='all',  # all, soft, hard
+                              input_size=8,
+                              output_size=8,
+                              time_factor=0,
+                              layers=[24, 24],
+                              i_act=np.full(8, 1),
+                              h_act=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                              o_act=np.full(8, 1),
+                              weightCap=2.0,
+                              noise_bias=0.0,
+                              output_noise=[False, False, False],
+                              max_episode_length=100,  # n_step_boostrap - total episode length 1600
+                              n_critic_bootstrap=5,
+                              alg_type=task.ALG.SAC,
+                              artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
+                              in_out_labels=[]),
         AGENT=dict(
+            datprep=None,
+            policy=MlpPolicy,
             learn_params=dict(
                 gamma=0.99,
                 tau=5e-3,

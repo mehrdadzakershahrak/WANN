@@ -46,7 +46,7 @@ MODEL_ARTIFACT_FILENAME = 'primary-model'
 
 
 class ObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, champion_artifacts_path, datprep):
+    def __init__(self, env, champion_artifacts_path, datprep=None):
         super().__init__(env)
 
         self.datprep = datprep

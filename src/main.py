@@ -6,7 +6,7 @@ import gym
 from task import task
 import imageio
 import numpy as np
-import config as run_config
+import config as default_config
 import sys
 from mpi4py import MPI
 import subprocess
@@ -21,14 +21,15 @@ SEED_RANGE_MIN = 1
 SEED_RANGE_MAX = 100000000
 LOG_INTERVAL = 10
 
-log = run_config.log()
+log = default_config.log()
 
 
 def run(config):
-    log.info(f'Beginning run for experiment {run_config.EXPERIMENT_ID}')
+    log.info(f'Beginning run for experiment {config["EXPERIMENT_ID"]}')
 
+    # TODO: clean up
     RESULTS_PATH = config['RESULTS_PATH']
-    EXPERIMENTS_PREFIX = f'{RESULTS_PATH}{run_config.EXPERIMENT_ID}{os.sep}'
+    EXPERIMENTS_PREFIX = f'{RESULTS_PATH}{config["EXPERIMENT_ID"]}{os.sep}'
     ARTIFACTS_PATH = f'{EXPERIMENTS_PREFIX}artifact{os.sep}'
     VIS_RESULTS_PATH = f'{EXPERIMENTS_PREFIX}vis{os.sep}'
     SAVE_GIF_PATH = f'{EXPERIMENTS_PREFIX}gif{os.sep}'
@@ -43,7 +44,7 @@ def run(config):
     log.info(config)
 
     log.info('Experiment description:')
-    log.info(run_config.DESCRIPTION)
+    log.info(config['DESCRIPTION'])
 
     paths = [ARTIFACTS_PATH, VIS_RESULTS_PATH, SAVE_GIF_PATH, WANN_OUT_PREFIX,
              f'{ALG_OUT_PREFIX}checkpoint{os.sep}checkpoint-alg{os.sep}']
@@ -59,7 +60,7 @@ def run(config):
 
     wtrain.init_games_config(games)
 
-    if run_config.TRAIN_WANN:
+    if config['TRAIN_WANN']:
         if "parent" == mpi_fork(NUM_WORKERS + 1): os._exit(0)
 
     wann_param_config = config['WANN_PARAM_CONFIG']
@@ -72,9 +73,9 @@ def run(config):
     )
 
     alg = None
-    for i in range(1, run_config.NUM_TRAIN_STEPS + 1):
-        if run_config.TRAIN_WANN:
-            wtrain.run(wann_args, use_checkpoint=True if i > 1 or run_config.USE_PREV_EXPERIMENT else False,
+    for i in range(1, config['NUM_EPOCHS'] + 1):
+        if config['TRAIN_WANN']:
+            wtrain.run(wann_args, use_checkpoint=True if i > 1 or config['USE_PREV_EXPERIMENT'] else False,
                        alg_critic=None if alg is None else alg.critic,
                        mem=None if alg is None else alg.replay_buffer)
 
@@ -87,7 +88,7 @@ def run(config):
                 )
 
                 learn_params = AGENT_CONFIG['learn_params']
-                ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
+                ENV_ID = WANN_ENV_ID if config['USE_WANN'] else ENV_NAME
                 env = Monitor(gym.make(ENV_ID), f'{EXPERIMENTS_PREFIX}log')
                 checkpoint_callback = CheckpointCallback(save_freq=learn_params['alg_checkpoint_interval'],
                                                          save_path=f'{ALG_OUT_PREFIX}checkpoint{os.sep}checkpoint-alg')
@@ -101,8 +102,8 @@ def run(config):
                 learn_params = AGENT_CONFIG['learn_params']
                 # TODO: save/load if on wann or SAC optimize step for prev experiment starts
                 if GAME_CONFIG.alg_type == task.ALG.SAC:
-                    if run_config.USE_PREV_EXPERIMENT:
-                        alg = SAC.load(f'{run_config.PREV_EXPERIMENT_PATH}{os.sep}alg')  # TODO: load SAC model here
+                    if config['USE_PREV_EXPERIMENT']:
+                        alg = SAC.load(f'{config["PREV_EXPERIMENT_PATH"]}{os.sep}alg')  # TODO: load SAC model here
                     else:
                         alg = SAC(AGENT_CONFIG['policy'], env, verbose=learn_params['log_verbose'],
                                   tensorboard_log=f'{EXPERIMENTS_PREFIX}log{os.sep}tb-log',
@@ -123,7 +124,7 @@ def run(config):
                 alg.learning_starts = 0
 
             if i % LOG_INTERVAL == 0:
-                log.info(f'performing learning step {i}/{run_config.NUM_TRAIN_STEPS} complete...')
+                log.info(f'performing learning step {i}/{config["NUM_TRAIN_STEPS"]} complete...')
             log.info('PERFORMING ALG TRAIN STEP')
             alg.learn(total_timesteps=learn_params['timesteps'], log_interval=learn_params['log_interval'],
                       callback=cb)
@@ -132,14 +133,14 @@ def run(config):
             break  # break if subprocess
 
         if i % LOG_INTERVAL == 0:
-            log.info(f'step {i}/{run_config.NUM_TRAIN_STEPS} complete')
+            log.info(f'step {i}/{config["NUM_TRAIN_STEPS"]} complete')
 
     if rank == 0:  # if main process
-        if run_config.RENDER_TEST_GIFS:
+        if config["RENDER_TEST_GIFS"]:
             vid_len = config['VIDEO_LENGTH']
 
-            ENV_ID = WANN_ENV_ID if run_config.USE_WANN else ENV_NAME
-            render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{run_config.EXPERIMENT_ID}-agent.gif')
+            ENV_ID = WANN_ENV_ID if config["USE_WANN"] else ENV_NAME
+            render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{config["EXPERIMENT_ID"]}-agent.gif')
             render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
     wtrain.run(None, kill_slaves=True)
@@ -193,21 +194,22 @@ def render_agent(model, env_name, vid_len,
 
 
 def main():
-    if run_config.TASK in ['cartpole']:
-        run(cartpole.get_task_config())
-    if run_config.TASK in ['lunar-lander']:
-        run(lunar_lander.get_task_config())
-    if run_config.TASK in ['bipedal-walker']:
-        run(bipedal_walker.get_task_config())
-    if run_config.TASK in ['car-racing']:
-        run(car_racing.get_task_config())
-    if run_config.TASK in ['half-cheetah']:
-        run(half_cheetah.get_task_config())
-    if run_config.TASK in ['ant']:
-        run(ant.get_task_config())
-    if run_config.TASK in ['humanoid']:
-        run(humanoid.get_task_config())
-    else:
+    task_labels = ['cartpole', 'lunar-lander', 'bipedal-walker', 'car-racing', 'half-cheetah',
+                   'ant', 'humanoid']
+    tasks = [cartpole.get_task_config(), lunar_lander.get_task_config(), bipedal_walker.get_task_config(),
+             car_racing.get_task_config(), half_cheetah.get_task_config(), ant.get_task_config(),
+             humanoid.get_task_config()]
+    run_config = default_config.run_config
+
+    task_found = False
+    for i, t in enumerate(task_labels):
+        if run_config['TASK'] == t:
+            config = tasks[i].extend(run_config)
+            run(config)
+            task_found = True
+            break
+
+    if not task_found:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 
 
