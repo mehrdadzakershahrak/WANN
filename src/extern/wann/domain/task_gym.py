@@ -6,6 +6,8 @@ from extern.wann.neat_src import *
 from stable_baselines3 import PPO, DDPG
 from task import task
 import torch as th
+from extern.wann.neat_src import ann as wnet
+from extern.wann import wann_train as wtrain
 
 
 class GymTask():
@@ -72,9 +74,9 @@ class GymTask():
     fitness = np.mean(reward)
     return fitness
 
-  def testInd(self, wVec, aVec, alg_critic, mem, batch_size=1024,
-              view=False, seed=-1, mem_sample=True,
-              bootstrap_default=-100.0): # TODO: make bootstrap default config driven
+  def testInd(self, wVec, aVec, alg_critic,
+              alg_policy, mem, batch_size=1024,
+              view=False, seed=-1, bootstrap_default=-100.0): # TODO: make bootstrap default config driven
     """Evaluate individual on task
     Args:
       wVec    - (np_array) - weight matrix as a flattened vector
@@ -89,71 +91,35 @@ class GymTask():
     Returns:
       fitness - (float)    - reward earned in trial
     """
-    if seed >= 0:
-      random.seed(seed)
-      np.random.seed(seed)
-      self.env.seed(seed)
-
-    state = self.env.reset()
-    self.env.t = 0
-    annOut = act(wVec, aVec, self.nInput, self.nOutput, state)
-    action = selectAct(annOut, self.actSelect)
-
-    # TODO: replace emulator step with critic eval from SAC here
-
-    state, reward, done, info = self.env.step(action)
-
-    if mem_sample:
-      if mem is None or mem.size() < batch_size:
-        ret = bootstrap_default
-      else:
-        batch = mem.sample(batch_size=batch_size)
-        ret = alg_critic(batch.observations, batch.actions)[0].mean().item()
+    if mem is None or mem.size() < batch_size:
+      ret = bootstrap_default
     else:
-      if self.maxEpisodeLength == 0:
-        if view:
-          if self.needsClosed:
-            self.env.render(close=done)
-          else:
-            self.env.render()
-        return reward
-      else:
-        totalReward = reward
+      batch = mem.sample(batch_size=batch_size)
+      n_feats = batch.observations.shape[1]
 
-      if alg_critic is None:
-        n_episodes = self.maxEpisodeLength
-      else:
-        n_episodes = 5  # TODO: make n_boostrap steps config driven
+      # TODO: flatten obs for CNN
 
-      gamma = .99
-      rewards = []
-      for tStep in range(n_episodes):
-        annOut = act(wVec, aVec, self.nInput, self.nOutput, state)
-        action = selectAct(annOut,self.actSelect)
+      tmp_obs = batch.observations.detach().cpu()
+      obs_batch = []
+      for o in tmp_obs:
+        obs_batch.append(wnet.act(wVec, aVec,
+                                  nInput=n_feats,
+                                  nOutput=n_feats,
+                                  inPattern=o))
 
-        state, reward, done, info = self.env.step(action)
-        if tStep == self.maxEpisodeLength-1 and not done:
-          if alg_critic is not None:
-            rewards.append(alg_critic(state, action))
-          break
-        else:
-          rewards.append(reward)
-        if view:
-          if self.needsClosed:
-            self.env.render(close=done)
-          else:
-            self.env.render()
-        if done:
-          break
+      obs_batch = np.array(obs_batch)
 
-      ret = None
-      if alg_critic is None:
-        ret = np.sum(rewards)
-      else:
-        d = np.array([gamma**i for i in range(n_episodes+2)])
-        ret = 0.0
-        for i, _ in enumerate(rewards):
-          ret += sum(rewards[i:]*d[:-(1+i)])
+      acts_batch = []
+      for o in obs_batch:
+        a, _ = alg_policy.predict(o, None, None, False)
+        acts_batch.append(a)
+
+      obs_batch = th.from_numpy(obs_batch).to(wtrain.DEVICE)
+
+      acts_batch = th.from_numpy(np.array(acts_batch)).to(wtrain.DEVICE)
+      acts_batch = acts_batch.reshape(-1, acts_batch.shape[2])
+
+      ret = alg_critic(obs_batch, acts_batch)[0].mean().item()
 
     return ret
 

@@ -32,7 +32,7 @@ def get_task_config():
                               weightCap=2.0,
                               noise_bias=0.0,
                               output_noise=[False, False, False],
-                              max_episode_length=500,  # use full episode length or reasonable trajectory len here
+                              max_episode_length=1200,  # use full episode length or reasonable trajectory len here
                               n_critic_bootstrap=5,
                               alg_type=task.ALG.SAC,
                               artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
@@ -60,19 +60,9 @@ def get_task_config():
                 replay_sample_ratio=1,  # 1:1 or 4:1 for 1e6 replay mem size
             )
         ),
-        ENTRY_POINT='task.car_racing:_env',
         WANN_PARAM_CONFIG=wann_param_config,
         VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH
     )
 
     return copy.deepcopy(task_config)
-
-
-def _env():
-    if task.WANN_OUT_PREFIX is None:
-        raise Exception('WANN out prefix was not set')
-
-    env = task.ObsWrapper(gym.make(ENV_NAME),
-                          champion_artifacts_path=f'{task.WANN_OUT_PREFIX}_best.out')
-    return env

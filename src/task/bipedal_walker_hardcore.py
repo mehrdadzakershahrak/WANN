@@ -33,7 +33,7 @@ def get_task_config():
                               weightCap=2.0,
                               noise_bias=0.0,
                               output_noise=[False, False, False],
-                              max_episode_length=600,
+                              max_episode_length=1600,
                               n_critic_bootstrap=5,
                               alg_type=task.ALG.SAC,
                               artifacts_path=f'{task.RESULTS_PATH}artifact{os.sep}{config.EXPERIMENT_ID}{os.sep}',
@@ -67,19 +67,9 @@ def get_task_config():
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
             )
         ),
-        ENTRY_POINT='task.bipedal_walker_hardcore:_env',
         WANN_PARAM_CONFIG=wann_param_config,
         VIDEO_LENGTH=1500,
         RESULTS_PATH=task.RESULTS_PATH
     )
 
     return copy.deepcopy(task_config)
-
-
-def _env():
-    if task.WANN_OUT_PREFIX is None:
-        raise Exception('WANN out prefix was not set')
-
-    env = task.ObsWrapper(gym.make(ENV_NAME),
-                          champion_artifacts_path=f'{task.WANN_OUT_PREFIX}_best.out')
-    return env

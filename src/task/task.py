@@ -1,9 +1,7 @@
 import enum
 import copy
 from collections import namedtuple
-import config
 import gym
-from extern.wann.neat_src import ann as wnet
 import os
 
 
@@ -41,35 +39,25 @@ _DEFAULT_WANN_HYPERPARAMS = {
     "spec_target": 4
 }
 
-RESULTS_PATH = f'result{os.sep}'
 MODEL_ARTIFACT_FILENAME = 'primary-model'
-WANN_OUT_PREFIX = None
+RESULTS_PATH = f'result{os.sep}'
 
 
-def set_wann_out_prefix(prefix):
-    global WANN_OUT_PREFIX
-
-    WANN_OUT_PREFIX = prefix
-
-
-class ObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, champion_artifacts_path, datprep=None):
+class ObsDatPrepWrapper(gym.ObservationWrapper):
+    def __init__(self, env, datprep):
         super().__init__(env)
 
         self.datprep = datprep
-        self.wVec, self.aVec, _ = wnet.importNet(champion_artifacts_path)
 
     def observation(self, obs):
-        if self.datprep is not None:
-            obs = self.datprep(obs)
-
-        if config.USE_WANN:
-            obs = wnet.act(self.wVec, self.aVec,
-                           nInput=obs.shape[0],
-                           nOutput=obs.shape[0],
-                           inPattern=obs)
+        obs = self.datprep(obs)
 
         return obs
+
+
+def make_env(env_name, datprep=None):
+    return ObsDatPrepWrapper(gym.make(env_name), datprep) \
+        if datprep is not None else gym.make(env_name)
 
 
 def get_default_wann_hyperparams():

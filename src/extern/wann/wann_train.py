@@ -19,6 +19,13 @@ games = None
 
 _ALG_CHECKPOINT_PATH=f'_checkpoint{os.sep}'
 _ALG_CHECKPOINT_FN = f'alg-checkpoint.pkl'
+DEVICE = None
+
+
+def set_device(device):
+  global DEVICE
+
+  DEVICE = device
 
 
 def init_games_config(g):
@@ -45,13 +52,16 @@ def master():
   for gen in range(hyp['maxGen']):
     if gen > 0:
       alg_critic = None
+      alg_policy = None
       mem = None
     else:
       alg_critic = hyp['alg_critic']
+      alg_policy = hyp['alg_policy']
       mem = hyp['mem']
 
     pop = alg.ask()            # Get newly evolved individuals from NEAT
-    reward = batchMpiEval(pop, alg_critic=alg_critic, mem=mem)  # Send pop to be evaluated by workers
+    reward = batchMpiEval(pop, alg_critic=alg_critic,
+                          alg_policy=alg_policy, mem=mem)  # Send pop to be evaluated by workers
     alg.tell(reward)           # Send fitness to NEAT    
 
     data = gatherData(data,alg,gen,hyp)
@@ -116,9 +126,11 @@ def checkBest(data):
     rep = np.tile(data.best[-1], bestReps)
 
     alg_critic = hyp['alg_critic']
+    alg_policy = hyp['alg_policy']
     mem = hyp['mem']
 
-    fitVector = batchMpiEval(rep, alg_critic=alg_critic, mem=mem, sameSeedForEachIndividual=False)
+    fitVector = batchMpiEval(rep, alg_critic=alg_critic,
+                             alg_policy=alg_policy, mem=mem, sameSeedForEachIndividual=False)
     trueFit = np.mean(fitVector)
     if trueFit > data.best[-2].fitness:  # Actually better!      
       data.best[-1].fitness = trueFit
@@ -133,7 +145,7 @@ def checkBest(data):
 
 
 # -- Parallelization ----------------------------------------------------- -- #
-def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True):
+def batchMpiEval(pop, alg_critic=None, alg_policy=None, mem=None, sameSeedForEachIndividual=True):
   """Sends population to workers for evaluation one batch at a time.
 
   Args:
@@ -164,6 +176,9 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
   if alg_critic is not None:
     critic_msg = cloudpickle.dumps(alg_critic)
 
+  if alg_policy is not None:
+    policy_msg = cloudpickle.dumps(alg_policy)
+
   if mem is not None:
     mem_msg = cloudpickle.dumps(mem)
 
@@ -171,6 +186,7 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
   i = 0 # Index of fitness we are filling
 
   update_critic = defaultdict(lambda: True)
+  update_policy = defaultdict(lambda: True)
   update_mem = defaultdict(lambda: True)
   for iBatch in range(nBatch): # Send one batch of individuals
     for iWork in range(nSlave): # (one to each worker if there)
@@ -179,6 +195,8 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
         n_wVec = np.shape(wVec)[0]
         aVec   = pop[i].aVec.flatten()
         n_aVec = np.shape(aVec)[0]
+
+        comm.send(n_wVec, dest=(iWork) + 1, tag=1)
 
         if alg_critic is not None and update_critic[iWork]:
           comm.send(1, dest=(iWork)+1, tag=6)
@@ -190,6 +208,16 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
         else:
           comm.send(0, dest=(iWork) + 1, tag=6)
 
+        if alg_policy is not None and update_policy[iWork]:
+          comm.send(1, dest=(iWork)+1, tag=10)
+
+          comm.send(len(policy_msg), dest=(iWork)+1, tag=11)
+          comm.Send(policy_msg, dest=(iWork) + 1, tag=11)
+
+          update_policy[iWork] = False
+        else:
+          comm.send(0, dest=(iWork) + 1, tag=10)
+
         if mem is not None and update_mem[iWork]:
           comm.send(1, dest=(iWork)+1, tag=8)
 
@@ -200,7 +228,6 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
         else:
           comm.send(0, dest=(iWork) + 1, tag=8)
 
-        comm.send(n_wVec, dest=(iWork)+1, tag=1)
         comm.Send(  wVec, dest=(iWork)+1, tag=2)
         comm.send(n_aVec, dest=(iWork)+1, tag=3)
         comm.Send(  aVec, dest=(iWork)+1, tag=4)
@@ -244,28 +271,36 @@ def slave():
   task = WannGymTask(games[hyp['task']], nReps=hyp['alg_nReps'])
 
   while True:
-    # Evaluate any weight vectors sent this way
-    # while True:
-    update_critic = True if comm.recv(source=0, tag=6) == 1 else False
-    if update_critic:
-      n_alg_critic = comm.recv(source=0, tag=7)
-      if n_alg_critic > 0:
-        alg_critic = np.empty(n_alg_critic, dtype='d')
-        comm.Recv(alg_critic, source=0, tag=7)
-        alg_critic = cloudpickle.loads(alg_critic)
-        hyp['alg_critic'] = alg_critic
-
-    update_mem = True if comm.recv(source=0, tag=8) == 1 else False
-    if update_mem:
-      n_mem = comm.recv(source=0, tag=9)
-      if n_mem > 0:
-        mem = np.empty(n_mem, dtype='d')
-        comm.Recv(mem, source=0, tag=9)
-        mem = cloudpickle.loads(mem)
-        hyp['mem'] = mem
-
     n_wVec = comm.recv(source=0,  tag=1)# how long is the array that's coming?
+
     if n_wVec > 0:
+      update_critic = True if comm.recv(source=0, tag=6) == 1 else False
+      if update_critic:
+        n_alg_critic = comm.recv(source=0, tag=7)
+        if n_alg_critic > 0:
+          alg_critic = np.empty(n_alg_critic, dtype='d')
+          comm.Recv(alg_critic, source=0, tag=7)
+          alg_critic = cloudpickle.loads(alg_critic)
+          hyp['alg_critic'] = alg_critic
+
+      update_policy = True if comm.recv(source=0, tag=10) == 1 else False
+      if update_policy:
+        n_alg_policy = comm.recv(source=0, tag=11)
+        if n_alg_policy > 0:
+          alg_policy = np.empty(n_alg_policy, dtype='d')
+          comm.Recv(alg_policy, source=0, tag=11)
+          alg_policy = cloudpickle.loads(alg_policy)
+          hyp['alg_policy'] = alg_policy
+
+      update_mem = True if comm.recv(source=0, tag=8) == 1 else False
+      if update_mem:
+        n_mem = comm.recv(source=0, tag=9)
+        if n_mem > 0:
+          mem = np.empty(n_mem, dtype='d')
+          comm.Recv(mem, source=0, tag=9)
+          mem = cloudpickle.loads(mem)
+          hyp['mem'] = mem
+
       wVec = np.empty(n_wVec, dtype='d')# allocate space to receive weights
       comm.Recv(wVec, source=0,  tag=2) # recieve weights
 
@@ -276,9 +311,9 @@ def slave():
 
       result = task.getFitness(wVec,aVec,hyp,seed=seed) # process it
       comm.Send(result, dest=0)            # send it back
-
-      if n_wVec < 0: # End signal recieved
+    else:
         break
+
 
 def stopAllWorkers():
   """Sends signal to all workers to shutdown.
@@ -289,10 +324,8 @@ def stopAllWorkers():
   for iWork in range(nSlave):
     comm.send(-1, dest=(iWork)+1, tag=1)
 
-# -- Input Parsing ------------------------------------------------------- -- #
 
-
-def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False):
+def run(args, alg_critic=None, alg_policy=None, mem=None, kill_slaves=False, use_checkpoint=False):
   if kill_slaves:
     stopAllWorkers()
     return
@@ -304,6 +337,7 @@ def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False
   # TODO: clean this up HACK
   hyp['use_checkpoint'] = use_checkpoint
   hyp['alg_critic'] = alg_critic
+  hyp['alg_policy'] = alg_policy
   hyp['mem'] = mem
 
   rank = args['rank']
@@ -316,7 +350,6 @@ def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False
     master()
   else:
     slave()
-    exit(0)
 
 
 if __name__ == "__main__":

@@ -3,12 +3,12 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 1
+VERSION_NUM = 3
 EXPERIMENT_ID = f'wann-test-{VERSION_NUM}'  # TODO: DRY ME UP
-USE_WANN = True # TODO: DRY ME UP
+USE_WANN = True  # TODO: DRY ME UP
 
 run_config = dict(
-    TASK='lunar-lander',
+    TASK='bipedal-walker',
     EXPERIMENT_ID=EXPERIMENT_ID,
     SEED=0,  # high level seed for all experiments
     USE_PREV_EXPERIMENT=False,
@@ -17,7 +17,7 @@ run_config = dict(
     USE_WANN=USE_WANN,
     VISUALIZE_WANN=False,
     RENDER_TEST_GIFS=False,
-    NUM_EPOCHS=1,
+    NUM_EPOCHS=500,
     DESCRIPTION='''
     This experiment implements WANN with the SAC critic sampled from the replay buffer
     

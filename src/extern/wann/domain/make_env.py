@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import pybulletgym
 from matplotlib.pyplot import imread
 
 

@@ -1,8 +1,9 @@
 from task import lunar_lander, bipedal_walker, ant, bipedal_walker_hardcore, car_racing, \
     cartpole, half_cheetah, humanoid, lunar_lander
 from extern.wann import wann_train as wtrain
-from stable_baselines3 import SAC
+from agent.wann_sac import SAC
 import gym
+import pybulletgym
 from task import task
 import imageio
 import numpy as np
@@ -13,6 +14,7 @@ import subprocess
 import os
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList, EvalCallback
+from extern.wann.neat_src import ann as wnet
 
 comm = MPI.COMM_WORLD
 rank = 0
@@ -36,7 +38,6 @@ def run(config):
     WANN_OUT_PREFIX = f'{ARTIFACTS_PATH}wann{os.sep}'
     ALG_OUT_PREFIX = f'{ARTIFACTS_PATH}alg{os.sep}'
     NUM_WORKERS = config['NUM_WORKERS']
-    WANN_ENV_ID = config['WANN_ENV_ID']
     GAME_CONFIG = config['GAME_CONFIG']
     AGENT_CONFIG = config['AGENT']
 
@@ -72,39 +73,42 @@ def run(config):
         games=games
     )
 
+    if rank == 0:  # main proc
+        env = Monitor(task.make_env(ENV_NAME), f'{EXPERIMENTS_PREFIX}log')
+        learn_params = AGENT_CONFIG['learn_params']
+        checkpoint_callback = CheckpointCallback(save_freq=learn_params['alg_checkpoint_interval'],
+                                                 save_path=f'{ALG_OUT_PREFIX}checkpoint{os.sep}checkpoint-alg')
+        eval_env = task.make_env(ENV_NAME)
+        eval_callback = EvalCallback(eval_env,
+                                     best_model_save_path=f'{ALG_OUT_PREFIX}checkpoint{os.sep}eval-best-alg',
+                                     log_path=f'{EXPERIMENTS_PREFIX}log{os.sep}checkpoint',
+                                     eval_freq=learn_params['eval_interval'])
+        cb = CallbackList([checkpoint_callback, eval_callback])
+
+    device = config['DEVICE']
+
     alg = None
     for i in range(1, config['NUM_EPOCHS'] + 1):
         if config['TRAIN_WANN']:
+            wtrain.set_device(device)
             wtrain.run(wann_args, use_checkpoint=True if i > 1 or config['USE_PREV_EXPERIMENT'] else False,
                        alg_critic=None if alg is None else alg.critic,
+                       alg_policy=None if alg is None else alg.policy,
                        mem=None if alg is None else alg.replay_buffer)
 
-        if rank == 0:  # main proc
+        if rank == 0:
             if i <= 1:
-                gym.envs.register(
-                    id=WANN_ENV_ID,
-                    entry_point=config['ENTRY_POINT'],
-                    max_episode_steps=GAME_CONFIG.max_episode_length
-                )
-
-                learn_params = AGENT_CONFIG['learn_params']
-                ENV_ID = WANN_ENV_ID if config['USE_WANN'] else ENV_NAME
-                env = Monitor(gym.make(ENV_ID), f'{EXPERIMENTS_PREFIX}log')
-                checkpoint_callback = CheckpointCallback(save_freq=learn_params['alg_checkpoint_interval'],
-                                                         save_path=f'{ALG_OUT_PREFIX}checkpoint{os.sep}checkpoint-alg')
-                eval_env = gym.make(ENV_ID)
-                eval_callback = EvalCallback(eval_env,
-                                             best_model_save_path=f'{ALG_OUT_PREFIX}checkpoint{os.sep}eval-best-alg',
-                                             log_path=f'{EXPERIMENTS_PREFIX}log{os.sep}checkpoint',
-                                             eval_freq=learn_params['eval_interval'])
-                cb = CallbackList([checkpoint_callback, eval_callback])
-
-                learn_params = AGENT_CONFIG['learn_params']
                 # TODO: save/load if on wann or SAC optimize step for prev experiment starts
                 if GAME_CONFIG.alg_type == task.ALG.SAC:
                     if config['USE_PREV_EXPERIMENT']:
                         alg = SAC.load(f'{config["PREV_EXPERIMENT_PATH"]}{os.sep}alg')  # TODO: load SAC model here
                     else:
+                        use_wann = config['USE_WANN']
+                        if use_wann:
+                            wVec, aVec, _ = wnet.importNet(f'{WANN_OUT_PREFIX}_best.out')
+                        else:
+                            wVec, aVec = None, None
+
                         alg = SAC(AGENT_CONFIG['policy'], env, verbose=learn_params['log_verbose'],
                                   tensorboard_log=f'{EXPERIMENTS_PREFIX}log{os.sep}tb-log',
                                   buffer_size=learn_params['mem_size'], learning_rate=learn_params['learn_rate'],
@@ -116,7 +120,10 @@ def run(config):
                                   gradient_steps=learn_params['gradient_steps_per_step'],
                                   n_episodes_rollout=learn_params['episode_len'],
                                   target_entropy=learn_params['target_entropy'],
-                                  device=config['DEVICE'])
+                                  device=device,
+                                  use_wann=use_wann,
+                                  wann_wVec=wVec,
+                                  wann_aVec=aVec)
                 else:
                     raise Exception(f'Algorithm configured is not currently supported')
 
@@ -124,26 +131,25 @@ def run(config):
                 alg.learning_starts = 0
 
             if i % LOG_INTERVAL == 0:
-                log.info(f'performing learning step {i}/{config["NUM_TRAIN_STEPS"]} complete...')
+                log.info(f'performing learning step {i}/{config["NUM_EPOCHS"]} complete...')
             log.info('PERFORMING ALG TRAIN STEP')
             alg.learn(total_timesteps=learn_params['timesteps'], log_interval=learn_params['log_interval'],
                       callback=cb)
             alg.save(f'{ALG_OUT_PREFIX}checkpoint{os.sep}full-run-checkpoint{os.sep}checkpoint-step-{i}')
         else:
-            break  # break if subprocess
+            return  # return if subprocess
 
         if i % LOG_INTERVAL == 0:
-            log.info(f'step {i}/{config["NUM_TRAIN_STEPS"]} complete')
+            log.info(f'step {i}/{config["NUM_EPOCHS"]} complete')
 
     if rank == 0:  # if main process
         if config["RENDER_TEST_GIFS"]:
             vid_len = config['VIDEO_LENGTH']
 
-            ENV_ID = WANN_ENV_ID if config["USE_WANN"] else ENV_NAME
-            render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename=f'{config["EXPERIMENT_ID"]}-agent.gif')
-            render_agent(alg, ENV_ID, vid_len, SAVE_GIF_PATH, filename='random.gif')
+            render_agent(alg, ENV_NAME, vid_len, SAVE_GIF_PATH, filename=f'{config["EXPERIMENT_ID"]}-agent.gif')
+            render_agent(alg, ENV_NAME, vid_len, SAVE_GIF_PATH, filename='random.gif')
 
-    wtrain.run(None, kill_slaves=True)
+        wtrain.run(None, kill_slaves=True)
 
 
 def mpi_fork(n):
@@ -207,7 +213,6 @@ def main():
             config = t.get_task_config()
             config.update(run_config)
 
-            task.set_wann_out_prefix(f'{task.RESULTS_PATH}{config["EXPERIMENT_ID"]}{os.sep}artifact{os.sep}wann{os.sep}')
             run(config)
 
             task_found = True
@@ -215,6 +220,8 @@ def main():
 
     if not task_found:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
+
+    print('all workers were stopped 10')
 
 
 if __name__ == '__main__':
