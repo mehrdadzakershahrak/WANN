@@ -220,8 +220,6 @@ def main():
     if not task_found:
         raise Exception('No implemented environment found. Please refer to list of implemented environments in README')
 
-    print('all workers were stopped 10')
-
 
 if __name__ == '__main__':
     main()

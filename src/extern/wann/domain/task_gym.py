@@ -95,20 +95,21 @@ class GymTask():
       ret = bootstrap_default
     else:
       partial_sample = mem.partial_sample(batch_size=batch_size)
-      obs, _, _, _, _ = mem.raw_ample(batch_size)
+      obs, _, _, _, _ = mem.raw_sample(batch_size)
 
       n_feats = obs.shape[1]
 
       # TODO: flatten obs for CNN
-      obs_batch = []
-      for o in obs:
-        obs_batch.append(wnet.act(wVec, aVec,
-                                  nInput=n_feats,
-                                  nOutput=n_feats,
-                                  inPattern=o))
-      obs_batch = th.from_numpy(np.array(obs_batch)).to(wtrain.DEVICE)
+      with th.no_grad():
+        obs_batch = []
+        for o in obs:
+          obs_batch.append(wnet.act(wVec, aVec,
+                                    nInput=n_feats,
+                                    nOutput=n_feats,
+                                    inPattern=o))
+        obs_batch = th.from_numpy(np.array(obs_batch)).to(wtrain.DEVICE)
 
-      ret = alg_critic(obs_batch, partial_sample.actions)[0].mean().item()
+        ret = alg_critic(obs_batch, partial_sample.actions)[0].mean().item()
 
     return ret
 

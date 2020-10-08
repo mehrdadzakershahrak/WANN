@@ -61,7 +61,7 @@ def get_task_config():
                 n_trains_per_step=1,  # soft target updates should use 1, try 5 for hard target updates
                 gradient_steps_per_step=1,
                 eval_interval=1500,
-                log_interval=10,
+                log_interval=1,
                 log_verbose=1,
                 replay_sample_ratio=1,  # 4:1 or .25 replay buffer sample to gradient update ratio
             )
