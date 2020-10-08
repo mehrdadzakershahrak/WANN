@@ -309,13 +309,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # we assume that the policy uses tanh to scale the action
             # We use non-deterministic action in the case of SAC, for TD3, it does not matter
             if self.use_wann:
-                # TODO: flatten if use CNN
-
-                n_feats = self._last_obs.shape[1]
-                obs = wnet.act(self.wann_wVec, self.wann_aVec,
-                               nInput=n_feats,
-                               nOutput=n_feats,
-                               inPattern=self._last_obs[0])
+                obs = self._last_wann_obs
             else:
                 obs = self._last_obs
 
@@ -442,9 +436,28 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                         # Avoid changing the original ones
                         self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
 
-                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
+                    wann_obs = []
+                    if self.use_wann:
+                        n_feats = obs.shape[1]
+
+                        for i, obs in enumerate([self._last_original_obs, new_obs_]):
+                            obs_batch = []
+                            for o in obs:
+                                obs_batch.append(wnet.act(self.wann_wVec, self.wann_aVec,
+                                                          nInput=n_feats,
+                                                          nOutput=n_feats,
+                                                          inPattern=o))
+                            wann_obs.append(np.array(obs_batch))
+                    else:
+                        wann_obs = [None, None]
+
+                    replay_buffer.add(self._last_original_obs, wann_obs[0],
+                                      new_obs_, wann_obs[1], buffer_action, reward_, done)
 
                 self._last_obs = new_obs
+                if self.use_wann:
+                    self._last_wann_obs = wann_obs[1]
+
                 # Save the unnormalized observation
                 if self._vec_normalize_env is not None:
                     self._last_original_obs = new_obs_

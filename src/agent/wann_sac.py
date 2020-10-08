@@ -202,8 +202,7 @@ class SAC(OffPolicyAlgorithm):
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
 
-            obs, _, nextobs, _, _ = self.replay_buffer.raw_sample(batch_size, env=self._vec_normalize_env)
-            part_replay_data = self.replay_buffer.partial_sample(batch_size, env=self._vec_normalize_env)
+            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
 
             # We need to sample because `log_std` may have changed between two gradient steps
             if self.use_sde:
@@ -211,18 +210,10 @@ class SAC(OffPolicyAlgorithm):
 
             # TODO: flatten if not mlp
 
-            # TODO: DRY this up
             if self.use_wann:
-                n_feats = obs.shape[1]
-                obs_batch = []
-                for o in obs:
-                    obs_batch.append(wnet.act(self.wann_wVec, self.wann_aVec,
-                                     nInput=n_feats,
-                                     nOutput=n_feats,
-                                     inPattern=o))
-                obs_batch = th.from_numpy(np.array(obs_batch)).to(self.device)
+                obs_batch = replay_data.observations
             else:
-                obs_batch = th.from_numpy(obs).to(self.device)
+                obs_batch = replay_data.wann_observations
 
             # Action by the current actor for the sampled state
             actions_pi, log_prob = self.actor.action_log_prob(obs_batch)
@@ -250,16 +241,9 @@ class SAC(OffPolicyAlgorithm):
 
             with th.no_grad():
                 if self.use_wann:
-                    n_feats = nextobs.shape[1]
-                    next_obs_batch = []
-                    for o in nextobs:
-                        next_obs_batch.append(wnet.act(self.wann_wVec, self.wann_aVec,
-                                              nInput=n_feats,
-                                              nOutput=n_feats,
-                                              inPattern=o))
-                    next_obs_batch = th.from_numpy(np.array(next_obs_batch)).to(self.device)
+                    next_obs_batch = replay_data.wann_next_observations
                 else:
-                    next_obs_batch = th.from_numpy(nextobs).to(self.device)
+                    next_obs_batch = replay_data.next_observations
 
                 # Select action according to policy
                 next_actions, next_log_prob = self.actor.action_log_prob(next_obs_batch)
@@ -269,11 +253,11 @@ class SAC(OffPolicyAlgorithm):
                 # add entropy term
                 target_q = target_q - ent_coef * next_log_prob.reshape(-1, 1)
                 # td error + entropy term
-                q_backup = part_replay_data.rewards + (1 - part_replay_data.dones) * self.gamma * target_q
+                q_backup = replay_data.rewards + (1 - replay_data.dones) * self.gamma * target_q
 
             # Get current Q estimates for each critic network
             # using action from the replay buffer
-            current_q_esimates = self.critic(obs_batch, part_replay_data.actions)
+            current_q_esimates = self.critic(obs_batch, replay_data.actions)
 
             # Compute critic loss
             critic_loss = 0.5 * sum([F.mse_loss(current_q, q_backup) for current_q in current_q_esimates])
