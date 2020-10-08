@@ -95,7 +95,7 @@ class GymTask():
       ret = bootstrap_default
     else:
       partial_sample = mem.partial_sample(batch_size=batch_size)
-      _, wann_obs, _, _, _, _ = mem.raw_sample(batch_size)
+      _, wann_obs, *_ = mem.raw_sample(batch_size)
 
       n_feats = wann_obs.shape[1]
 

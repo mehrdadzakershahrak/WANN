@@ -438,7 +438,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
                     wann_obs = []
                     if self.use_wann:
-                        n_feats = obs.shape[1]
+                        n_feats = new_obs_.shape[1]
 
                         for i, obs in enumerate([self._last_original_obs, new_obs_]):
                             obs_batch = []
@@ -447,7 +447,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                                                           nInput=n_feats,
                                                           nOutput=n_feats,
                                                           inPattern=o))
-                            wann_obs.append(np.array(obs_batch))
+                            wann_obs.append(np.array(obs_batch).reshape(1, -1))
                     else:
                         wann_obs = [None, None]
 
