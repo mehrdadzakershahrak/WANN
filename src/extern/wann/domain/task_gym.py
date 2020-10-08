@@ -75,7 +75,7 @@ class GymTask():
     return fitness
 
   def testInd(self, wVec, aVec, alg_critic,
-              alg_policy, mem, batch_size=1024,
+              mem, batch_size=1024,
               view=False, seed=-1, bootstrap_default=-100.0): # TODO: make bootstrap default config driven
     """Evaluate individual on task
     Args:
@@ -94,32 +94,21 @@ class GymTask():
     if mem is None or mem.size() < batch_size:
       ret = bootstrap_default
     else:
-      batch = mem.sample(batch_size=batch_size)
-      n_feats = batch.observations.shape[1]
+      partial_sample = mem.partial_sample(batch_size=batch_size)
+      obs, _, _, _, _ = mem.raw_ample(batch_size)
+
+      n_feats = obs.shape[1]
 
       # TODO: flatten obs for CNN
-
-      tmp_obs = batch.observations.detach().cpu()
       obs_batch = []
-      for o in tmp_obs:
+      for o in obs:
         obs_batch.append(wnet.act(wVec, aVec,
                                   nInput=n_feats,
                                   nOutput=n_feats,
                                   inPattern=o))
+      obs_batch = th.from_numpy(np.array(obs_batch)).to(wtrain.DEVICE)
 
-      obs_batch = np.array(obs_batch)
-
-      acts_batch = []
-      for o in obs_batch:
-        a, _ = alg_policy.predict(o, None, None, False)
-        acts_batch.append(a)
-
-      obs_batch = th.from_numpy(obs_batch).to(wtrain.DEVICE)
-
-      acts_batch = th.from_numpy(np.array(acts_batch)).to(wtrain.DEVICE)
-      acts_batch = acts_batch.reshape(-1, acts_batch.shape[2])
-
-      ret = alg_critic(obs_batch, acts_batch)[0].mean().item()
+      ret = alg_critic(obs_batch, partial_sample.actions)[0].mean().item()
 
     return ret
 

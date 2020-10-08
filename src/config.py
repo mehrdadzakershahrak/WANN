@@ -3,8 +3,8 @@ import logging.config
 import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
-VERSION_NUM = 3
-EXPERIMENT_ID = f'wann-test-{VERSION_NUM}'  # TODO: DRY ME UP
+VERSION_NUM = 1
+EXPERIMENT_ID = f'wann-bipedal-use-current-{VERSION_NUM}'  # TODO: DRY ME UP
 USE_WANN = True  # TODO: DRY ME UP
 
 run_config = dict(
@@ -21,7 +21,7 @@ run_config = dict(
     DESCRIPTION='''
     This experiment implements WANN with the SAC critic sampled from the replay buffer
     
-    full run test
+    bipedal new config test
     '''
 )
 

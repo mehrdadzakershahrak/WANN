@@ -52,16 +52,13 @@ def master():
   for gen in range(hyp['maxGen']):
     if gen > 0:
       alg_critic = None
-      alg_policy = None
       mem = None
     else:
       alg_critic = hyp['alg_critic']
-      alg_policy = hyp['alg_policy']
       mem = hyp['mem']
 
     pop = alg.ask()            # Get newly evolved individuals from NEAT
-    reward = batchMpiEval(pop, alg_critic=alg_critic,
-                          alg_policy=alg_policy, mem=mem)  # Send pop to be evaluated by workers
+    reward = batchMpiEval(pop, alg_critic=alg_critic, mem=mem)  # Send pop to be evaluated by workers
     alg.tell(reward)           # Send fitness to NEAT    
 
     data = gatherData(data,alg,gen,hyp)
@@ -126,11 +123,10 @@ def checkBest(data):
     rep = np.tile(data.best[-1], bestReps)
 
     alg_critic = hyp['alg_critic']
-    alg_policy = hyp['alg_policy']
     mem = hyp['mem']
 
     fitVector = batchMpiEval(rep, alg_critic=alg_critic,
-                             alg_policy=alg_policy, mem=mem, sameSeedForEachIndividual=False)
+                             mem=mem, sameSeedForEachIndividual=False)
     trueFit = np.mean(fitVector)
     if trueFit > data.best[-2].fitness:  # Actually better!      
       data.best[-1].fitness = trueFit
@@ -145,7 +141,7 @@ def checkBest(data):
 
 
 # -- Parallelization ----------------------------------------------------- -- #
-def batchMpiEval(pop, alg_critic=None, alg_policy=None, mem=None, sameSeedForEachIndividual=True):
+def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True):
   """Sends population to workers for evaluation one batch at a time.
 
   Args:
@@ -176,9 +172,6 @@ def batchMpiEval(pop, alg_critic=None, alg_policy=None, mem=None, sameSeedForEac
   if alg_critic is not None:
     critic_msg = cloudpickle.dumps(alg_critic)
 
-  if alg_policy is not None:
-    policy_msg = cloudpickle.dumps(alg_policy)
-
   if mem is not None:
     mem_msg = cloudpickle.dumps(mem)
 
@@ -207,16 +200,6 @@ def batchMpiEval(pop, alg_critic=None, alg_policy=None, mem=None, sameSeedForEac
           update_critic[iWork] = False
         else:
           comm.send(0, dest=(iWork) + 1, tag=6)
-
-        if alg_policy is not None and update_policy[iWork]:
-          comm.send(1, dest=(iWork)+1, tag=10)
-
-          comm.send(len(policy_msg), dest=(iWork)+1, tag=11)
-          comm.Send(policy_msg, dest=(iWork) + 1, tag=11)
-
-          update_policy[iWork] = False
-        else:
-          comm.send(0, dest=(iWork) + 1, tag=10)
 
         if mem is not None and update_mem[iWork]:
           comm.send(1, dest=(iWork)+1, tag=8)
@@ -283,15 +266,6 @@ def slave():
           alg_critic = cloudpickle.loads(alg_critic)
           hyp['alg_critic'] = alg_critic
 
-      update_policy = True if comm.recv(source=0, tag=10) == 1 else False
-      if update_policy:
-        n_alg_policy = comm.recv(source=0, tag=11)
-        if n_alg_policy > 0:
-          alg_policy = np.empty(n_alg_policy, dtype='d')
-          comm.Recv(alg_policy, source=0, tag=11)
-          alg_policy = cloudpickle.loads(alg_policy)
-          hyp['alg_policy'] = alg_policy
-
       update_mem = True if comm.recv(source=0, tag=8) == 1 else False
       if update_mem:
         n_mem = comm.recv(source=0, tag=9)
@@ -325,7 +299,7 @@ def stopAllWorkers():
     comm.send(-1, dest=(iWork)+1, tag=1)
 
 
-def run(args, alg_critic=None, alg_policy=None, mem=None, kill_slaves=False, use_checkpoint=False):
+def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False):
   if kill_slaves:
     stopAllWorkers()
     return
@@ -337,7 +311,6 @@ def run(args, alg_critic=None, alg_policy=None, mem=None, kill_slaves=False, use
   # TODO: clean this up HACK
   hyp['use_checkpoint'] = use_checkpoint
   hyp['alg_critic'] = alg_critic
-  hyp['alg_policy'] = alg_policy
   hyp['mem'] = mem
 
   rank = args['rank']

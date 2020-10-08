@@ -93,7 +93,6 @@ def run(config):
             wtrain.set_device(device)
             wtrain.run(wann_args, use_checkpoint=True if i > 1 or config['USE_PREV_EXPERIMENT'] else False,
                        alg_critic=None if alg is None else alg.critic,
-                       alg_policy=None if alg is None else alg.policy,
                        mem=None if alg is None else alg.replay_buffer)
 
         if rank == 0:

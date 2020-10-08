@@ -53,7 +53,7 @@ def get_task_config():
                 mem_size=int(1e6),
                 target_entropy='auto',
                 timesteps=1600,
-                train_batch_size=100,  # batch buffer size
+                train_batch_size=1024,  # batch buffer size
                 episode_len=-1,  # entire episode length
                 eval_episode_len=-1,
                 alg_checkpoint_interval=500,
