@@ -18,7 +18,7 @@ def get_task_config():
 
     task_config = dict(
         WANN_ENV_ID='wann-bipedalwalker-v3',
-        NUM_WORKERS=5,
+        NUM_WORKERS=15,
         DEVICE='cuda:0',
         GAME_CONFIG=task.Game(env_name=ENV_NAME,
                               actionSelect='all',  # OPTIONS: soft, all, hard

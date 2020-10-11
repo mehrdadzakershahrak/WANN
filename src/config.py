@@ -4,8 +4,8 @@ import structlog
 from structlog import processors, stdlib, threadlocal, configure
 
 VERSION_NUM = 1
-EXPERIMENT_ID = f'wann-bipedal-use-current-{VERSION_NUM}'  # TODO: DRY ME UP
-USE_WANN = True  # TODO: DRY ME UP
+EXPERIMENT_ID = f'no-wann-bipedal-use-current-{VERSION_NUM}'  # TODO: DRY ME UP
+USE_WANN = False  # TODO: DRY ME UP
 
 run_config = dict(
     TASK='bipedal-walker',
@@ -13,7 +13,7 @@ run_config = dict(
     SEED=0,  # high level seed for all experiments
     USE_PREV_EXPERIMENT=False,
     PREV_EXPERIMENT_PATH='prev-run',
-    TRAIN_WANN=True,
+    TRAIN_WANN=False,
     USE_WANN=USE_WANN,
     VISUALIZE_WANN=False,
     RENDER_TEST_GIFS=False,

@@ -440,7 +440,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                     if self.use_wann:
                         n_feats = new_obs_.shape[1]
 
-                        for i, obs in enumerate([self._last_original_obs, new_obs_]):
+                        for i, obs in enumerate([self._last_original_obs]):
                             obs_batch = []
                             for o in obs:
                                 obs_batch.append(wnet.act(self.wann_wVec, self.wann_aVec,
