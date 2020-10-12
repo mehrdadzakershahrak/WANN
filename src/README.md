@@ -1,5 +1,8 @@
 # WEIGTH AGNOSTIC NEURAL NETWORK FAST CONVERGENCE PROJECT
 
+## REQUIREMENTS
+This project requires Python 3.7
+
 ## INSTALLATION
 
 1) execute 'pip install torch===1.6.0 torchvision===0.7.0 -f https://download.pytorch.org/whl/torch_stable.html'
