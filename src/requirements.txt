@@ -1,7 +1,7 @@
 gym[atari]
 gym==0.17.2
 pandas
-numpy==1.17.0
+numpy
 matplotlib
 sns
 Pillow
