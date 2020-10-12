@@ -162,9 +162,6 @@ def mpi_fork(n):
             IN_MPI="1"
         )
 
-        # TODO: check if linux or windows here
-        # subprocess.check_call(["mpirun", "-np", str(n), sys.executable] +['-u']+ sys.argv, env=env)
-        # ADDED local mod to work with Win 10
         subprocess.check_call(["mpiexec", "-n", str(n), sys.executable] + ['-u'] + sys.argv, env=env)
 
         return "parent"
