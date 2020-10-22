@@ -52,13 +52,16 @@ def master():
   for gen in range(hyp['maxGen']):
     if gen > 0:
       alg_critic = None
+      alg_policy = None
       mem = None
     else:
       alg_critic = hyp['alg_critic']
+      alg_policy = hyp['alg_policy']
       mem = hyp['mem']
 
     pop = alg.ask()            # Get newly evolved individuals from NEAT
-    reward = batchMpiEval(pop, alg_critic=alg_critic, mem=mem)  # Send pop to be evaluated by workers
+    reward = batchMpiEval(pop, alg_critic=alg_critic,
+                          alg_polic=alg_policy, mem=mem)  # Send pop to be evaluated by workers
     alg.tell(reward)           # Send fitness to NEAT    
 
     data = gatherData(data,alg,gen,hyp)
@@ -141,7 +144,7 @@ def checkBest(data):
 
 
 # -- Parallelization ----------------------------------------------------- -- #
-def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True):
+def batchMpiEval(pop, alg_critic=None, alg_policy=None, mem=None, sameSeedForEachIndividual=True):
   """Sends population to workers for evaluation one batch at a time.
 
   Args:
@@ -172,6 +175,9 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
   if alg_critic is not None:
     critic_msg = cloudpickle.dumps(alg_critic)
 
+  if alg_policy is not None:
+    policy_msg = cloudpickle.dumps(alg_policy)
+
   if mem is not None:
     mem_msg = cloudpickle.dumps(mem)
 
@@ -200,6 +206,12 @@ def batchMpiEval(pop, alg_critic=None, mem=None, sameSeedForEachIndividual=True)
           update_critic[iWork] = False
         else:
           comm.send(0, dest=(iWork) + 1, tag=6)
+
+        if alg_policy is not None and update_policy[iWork]:
+          comm.send(1, dest=(iWork)+1, tag=15)
+
+          comm.send(len(policy_msg), dest=(iWork)+1, tag=16)
+          comm.Send(policy_msg, dest=(iWork)+1, tag=16)
 
         if mem is not None and update_mem[iWork]:
           comm.send(1, dest=(iWork)+1, tag=8)
@@ -266,6 +278,15 @@ def slave():
           alg_critic = cloudpickle.loads(alg_critic)
           hyp['alg_critic'] = alg_critic
 
+      update_policy = True if comm.recv(source=0, tag=15) == 1 else False
+      if update_policy:
+        n_alg_policy = comm.recv(source=0, tag=16)
+        if n_alg_policy > 0:
+          alg_policy = np.empty(n_alg_policy, dtype='d')
+          comm.Recv(alg_policy, source=0, tag=16)
+          alg_policy = cloudpickle.loads(alg_policy)
+          hyp['alg_policy'] = alg_policy
+
       update_mem = True if comm.recv(source=0, tag=8) == 1 else False
       if update_mem:
         n_mem = comm.recv(source=0, tag=9)
@@ -299,7 +320,8 @@ def stopAllWorkers():
     comm.send(-1, dest=(iWork)+1, tag=1)
 
 
-def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False):
+def run(args, alg_critic=None, alg_policy=None, mem=None, kill_slaves=False, use_checkpoint=False,
+        wann_batch_size=None, wann_bootstrap_default=None):
   if kill_slaves:
     stopAllWorkers()
     return
@@ -308,10 +330,13 @@ def run(args, alg_critic=None, mem=None, kill_slaves=False, use_checkpoint=False
   fileName    = args['outPrefix']
   hyp  = args['hyperparam']
 
-  # TODO: clean this up HACK
   hyp['use_checkpoint'] = use_checkpoint
   hyp['alg_critic'] = alg_critic
+  hyp['alg_policy'] = alg_policy
   hyp['mem'] = mem
+
+  hyp['wann_batch_size'] = wann_batch_size
+  hyp['wann_bootstrap_default'] = wann_bootstrap_default
 
   rank = args['rank']
   nWorker = args['num_workers']

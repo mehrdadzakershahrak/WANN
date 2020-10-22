@@ -74,9 +74,9 @@ class GymTask():
     fitness = np.mean(reward)
     return fitness
 
-  def testInd(self, wVec, aVec, alg_critic,
-              mem, batch_size=1024,
-              view=False, seed=-1, bootstrap_default=-100.0): # TODO: make bootstrap default config driven
+  def testInd(self, wVec, aVec, alg_critic, alg_policy,
+              mem, batch_size=None,
+              view=False, seed=-1, bootstrap_default=None): # TODO: make bootstrap default config driven
     """Evaluate individual on task
     Args:
       wVec    - (np_array) - weight matrix as a flattened vector
@@ -94,7 +94,6 @@ class GymTask():
     if mem is None or mem.size() < batch_size:
       ret = bootstrap_default
     else:
-      partial_sample = mem.partial_sample(batch_size=batch_size)
       _, wann_obs, *_ = mem.raw_sample(batch_size)
 
       n_feats = wann_obs.shape[1]
@@ -109,10 +108,9 @@ class GymTask():
                                     nOutput=n_feats,
                                     inPattern=o))
         obs_batch = th.from_numpy(np.array(obs_batch)).to(wtrain.DEVICE)
-        # acts = alg_policy(obs_batch)
 
+        acts = alg_policy(obs_batch)
         ret = alg_critic(obs_batch, acts)[0].mean().item()
-
 
     return ret
 

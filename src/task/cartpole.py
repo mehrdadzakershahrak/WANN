@@ -41,6 +41,9 @@ def get_task_config():
         AGENT=dict(
             datprep=None,
             policy=MlpPolicy,
+            mini_mem_size=1e6 // 10,
+            wann_batch_size=1024,
+            wann_bootstrap_default=-100,
             learn_params=dict(
                 gamma=0.99,
                 tau=5e-3,

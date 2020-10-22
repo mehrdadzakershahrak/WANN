@@ -92,8 +92,10 @@ def run(config):
         if config['TRAIN_WANN']:
             wtrain.set_device(device)
             wtrain.run(wann_args, use_checkpoint=True if i > 1 or config['USE_PREV_EXPERIMENT'] else False,
-                       alg_critic=None if alg is None else alg.critic,
-                       mem=None if alg is None else alg.replay_buffer)
+                       alg_critic=None if alg is None else alg.critic, alg_policy=None if alg is None else alg.policy,
+                       mem=None if alg is None else alg.replay_buffer,
+                       wann_batch_size=AGENT_CONFIG['wann_batch_size'],
+                       wann_bootstrap_default=AGENT_CONFIG['wann_bootstrap_default'])
 
         if rank == 0:
             if i <= 1:

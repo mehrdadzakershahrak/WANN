@@ -73,6 +73,11 @@ class WannGymTask(GymTask):
       nRep = hyp['alg_nReps']
 
     alg_critic = hyp['alg_critic']
+    alg_policy = hyp['alg_policy']
+
+    wann_batch_size = hyp['wann_batch_size']
+    wann_bootstrap_default = hyp['wann_bootstrap_default']
+
     mem = hyp['mem']
 
     # Set weight values to test WANN with
@@ -88,10 +93,16 @@ class WannGymTask(GymTask):
         wMat = self.setWeights(wVec,wVals[iVal])
         if seed == -1:
           reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic,
-                                           mem=mem, seed=seed,view=view)
+                                           alg_policy=alg_policy,
+                                           mem=mem, seed=seed, view=view,
+                                           batch_size=wann_batch_size,
+                                           bootstrap_default=wann_bootstrap_default)
         else:
           reward[iRep,iVal] = self.testInd(wMat, aVec, alg_critic=alg_critic,
-                                           mem=mem, seed=seed+iRep,view=view)
+                                           alg_policy=alg_policy,
+                                           mem=mem, seed=seed+iRep, view=view,
+                                           batch_size=wann_batch_size,
+                                           bootstrap_default=wann_bootstrap_default)
           
     if returnVals is True:
       return np.mean(reward,axis=0), wVals
