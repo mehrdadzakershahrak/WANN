@@ -28,6 +28,14 @@ class RolloutBufferSamples(NamedTuple):
 
 class ReplayBufferSamples(NamedTuple):
     observations: th.Tensor
+    actions: th.Tensor
+    next_observations: th.Tensor
+    dones: th.Tensor
+    rewards: th.Tensor
+
+
+class WannReplayBufferSamples(NamedTuple):
+    observations: th.Tensor
     wann_observations: th.Tensor
     actions: th.Tensor
     next_observations: th.Tensor

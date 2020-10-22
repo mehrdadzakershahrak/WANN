@@ -109,8 +109,10 @@ class GymTask():
                                     nOutput=n_feats,
                                     inPattern=o))
         obs_batch = th.from_numpy(np.array(obs_batch)).to(wtrain.DEVICE)
+        # acts = alg_policy(obs_batch)
 
-        ret = alg_critic(obs_batch, partial_sample.actions)[0].mean().item()
+        ret = alg_critic(obs_batch, acts)[0].mean().item()
+
 
     return ret
 

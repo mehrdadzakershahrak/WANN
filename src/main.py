@@ -97,17 +97,21 @@ def run(config):
 
         if rank == 0:
             if i <= 1:
+                use_wann = config['USE_WANN']
+                if use_wann:
+                    wVec, aVec, _ = wnet.importNet(f'{WANN_OUT_PREFIX}_best.out')
+                else:
+                    wVec, aVec = None, None
+
+                if alg is not None:
+                    alg.sync_buffers(AGENT_CONFIG['mini_mem_size'],
+                                     env.observation_space.shape[0], wVec, aVec)
+
                 # TODO: save/load if on wann or SAC optimize step for prev experiment starts
                 if GAME_CONFIG.alg_type == task.ALG.SAC:
                     if config['USE_PREV_EXPERIMENT']:
                         alg = SAC.load(f'{config["PREV_EXPERIMENT_PATH"]}{os.sep}alg')  # TODO: load SAC model here
                     else:
-                        use_wann = config['USE_WANN']
-                        if use_wann:
-                            wVec, aVec, _ = wnet.importNet(f'{WANN_OUT_PREFIX}_best.out')
-                        else:
-                            wVec, aVec = None, None
-
                         alg = SAC(AGENT_CONFIG['policy'], env, verbose=learn_params['log_verbose'],
                                   tensorboard_log=f'{EXPERIMENTS_PREFIX}log{os.sep}tb-log',
                                   buffer_size=learn_params['mem_size'], learning_rate=learn_params['learn_rate'],
