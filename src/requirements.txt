@@ -9,6 +9,6 @@ scikit-learn
 pyarrow
 scipy
 opencv-contrib-python
-tensorflow==2.0.0
+tensorflow==2.4.2
 torch==1.5.1
 torchvision
