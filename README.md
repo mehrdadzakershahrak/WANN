@@ -9,7 +9,7 @@ DRL is a class for Deep Reinforcement Learning. It uses PyTorch to create a neur
 WAN Class
 WAN stands for Weight Agnostic Neural Network. It is initialized with a shared weight value. The architecture of the network is defined in the constructor, with a certain number of hidden nodes, input nodes, and output nodes. It also includes a weight vector, initially set to zero, and a bias. The class contains methods for setting the weights, tuning the weights, applying various activation functions, and calculating the output for a given input.
 
-Main Functions
+## Main Functions
 drl Function
 The drl function uses a DRL object to simulate an environment (a 'CartPole' environment in this case) over 1000 epochs.
 
@@ -19,8 +19,8 @@ The wan function simulates the 'CartPoleSwingUpEnv' environment using a WAN obje
 tpj Function
 The tpj function is currently a placeholder. The comments suggest that this function is intended to implement some kind of evolutionary algorithm for neural networks, including steps for initializing a population, evaluating and ranking networks, and creating new networks from the best performing ones. This function is yet to be implemented.
 
-Usage
+## Usage
 Please note that the script won't run as it is due to a number of issues, including missing imports (e.g., CartPoleEnv, CartPoleSwingUpEnv) and some undefined functions/classes (e.g., DRL). Also, the tpj function is currently empty and would need to be implemented.
 
-Contributions
+## Contributions
 Contributions are welcome! Feel free to add improvements, bugfixes, or new features via pull requests.
