@@ -1,6 +1,6 @@
 # Weight Agostic Neural Network
 
-Overview
+## Overview
 This project comprises implementations of two classes, DRL (Deep Reinforcement Learning) and WAN (Weight Agnostic Neural Network), along with three main functions: drl, wan, and tpj.
 
 DRL Class
