@@ -1,6 +1,15 @@
 import numpy
-class WAN(object):  #Weight Agnostic Neural
+import math
+from random import randint
+
+class WAN(object):  
+    """
+    Weight Agnostic Neural Network class
+    """
     def __init__(self, init_shared_weight):
+        """
+        Initializes the class with given shared weight and default parameters
+        """
         self.num_hidden = 10
         self.input_size = 5
         self.output_size = 1
@@ -17,6 +26,9 @@ class WAN(object):  #Weight Agnostic Neural
         self.set_weight(init_shared_weight, 0)
 
     def set_weight(self, weight, weight_bias):
+        """
+        Sets weight for the network
+        """
         nValues = len(self.wKey)
         if type(weight_bias).__name__ not in ['int','long','float']:
             weight_bias = 0
@@ -29,9 +41,15 @@ class WAN(object):  #Weight Agnostic Neural
             self.wVec[k] = weights[i] + weight_bias
 
     def tune_weights(self):
+        """
+        Tunes the weights of the network
+        """
         self.set_weight(self.weights, self.weight_bias)
-
+        
     def get_action(self, old_state):
+        """
+        Gets the action based on the old state
+        """
         nNodes = len(self.aVec)
         wMat = numpy.array(self.wVec).reshape((nNodes, nNodes))
         nodeAct = [0] * nNodes
@@ -39,12 +57,15 @@ class WAN(object):  #Weight Agnostic Neural
         for i in range(len(old_state)):
             nodeAct[i+1] = old_state[i]
         for iNode in range(self.input_size+1, nNodes):
-            rawAct = numpy.dot(nodeAct, wMat[:, iNode:iNode+1])  #TPJ
+            rawAct = numpy.dot(nodeAct, wMat[:, iNode:iNode+1])
             rawAct = self.applyActSimple(self.aVec[iNode], rawAct.tolist()[0])
             nodeAct[iNode] = rawAct
         return nodeAct[-self.output_size:][0]
 
     def applyActSimple(self, actId, x):
+        """
+        Applies the activation function based on the provided activation id
+        """
         if actId == 1:
             return x
         elif actId == 2:
@@ -69,58 +90,28 @@ class WAN(object):  #Weight Agnostic Neural
             print('unsupported actionvation type: ',actId)
             return None
 
-def drl(environment):
-    environment = CartPoleEnv()  #import gym environment = gym.make('CartPole-v0')
-    drl = DRL(environment.observation_space.shape[0], 256, environment.action_space.shape[0])  #.n
-    for epoch in range(1000):
-        state_old = environment.reset()
-        rewards = 1
-        while True:
-            environment.render()
-            action_now = drl.explore(state_old)            
-            state_new, reward_now, done, _ = environment.step(action_now)
-            if done:
-                reward_now = -1
-            drl.remember(state_old, action_now, reward_now, state_new)
-            if done:
-                break
-            rewards += reward_now
-            state_old = state_new
-            drl.rethink()   #TPJ: the chance to rethink is very import: not-done
-        print('epoch=%04d'%(epoch),'  ','rewards=%d'%(rewards))
 
 def tpj():
-    #1.) Initialize：Create population of minimal networks.
-    #2.) Evaluate：Test with range of shared weight values.
-    #3.) Rank：Rank by performance and complexity 
-    #4.) Vary：Create new population by varying best networks.
-    #TODO
+    """
+    The implementation of tpj algorithm.
+    """
+    # Initialize a population of minimal networks
+    population = [WAN(randint(-5, 5)) for _ in range(100)]  # Just an example, replace with real initialization
 
-def wan():
-    environment = CartPoleSwingUpEnv()
-    drl = WAN(-1.5)
-    for epoch in range(20):
-        if epoch == 0:
-            print('init_weights:')
-        elif epoch == 10:
-            print()
-            print('tune_weights:')
-            drl.tune_weights()
+    for epoch in range(100):  # Example number of epochs
+        # Evaluate the performance of each network with a range of shared weight values
+        for network in population:
+            # Here you would test the network and assign a performance score based on your criteria
+            pass  # TODO
 
-        state_old = environment.reset()
-        rewards = 1
-        for step in range(100000000):
-            environment.render()
-            action_now = drl.get_action(state_old)
-            state_new, reward_now, done = environment.step(action_now)
-            if done:
-                reward_now = -1
-                break
-            rewards += reward_now
-            state_old = state_new
-        print('epoch=%04d'%(epoch),'  ','rewards=%d'%(rewards),'  ','step=%d'%(step))
+        # Rank the networks by their performance and complexity
+        population.sort(key=lambda x: x.performance - x.complexity)  # Assuming each network has performance and complexity attributes
 
-if __name__ == '__main__':    
-    #drl()
-    #wan()
-    tpj()
+        # Create a new population by varying the best networks
+        new_population = []
+        for i in range(len(population) // 2):  # Using half of the population for breeding
+            # TODO: Add your breeding/variance logic here
+            pass
+        population = new_population
+        
+
